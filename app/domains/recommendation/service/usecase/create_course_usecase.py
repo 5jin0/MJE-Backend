@@ -834,7 +834,8 @@ class CreateCourseUseCase:
         message = _INSUFFICIENT_MESSAGE if total_courses < 3 else None
         used_cover_urls: set[str] = set()
         used_cover_categories: set[str] = set()
-        used_title_keys: set[str] = set()
+        used_title_axes: set[str] = set()
+        used_title_phrases: set[str] = set()
         main_course = (
             self._to_course_dto(
                 main,
@@ -843,7 +844,8 @@ class CreateCourseUseCase:
                 str(uuid.uuid4()),
                 used_cover_urls,
                 used_cover_categories,
-                used_title_keys,
+                used_title_axes,
+                used_title_phrases,
             )
             if main
             else None
@@ -856,7 +858,8 @@ class CreateCourseUseCase:
                 str(uuid.uuid4()),
                 used_cover_urls,
                 used_cover_categories,
-                used_title_keys,
+                used_title_axes,
+                used_title_phrases,
             )
             for c in [sub1, sub2]
             if c is not None
@@ -876,7 +879,8 @@ class CreateCourseUseCase:
         course_id: str,
         used_cover_urls: set[str] | None = None,
         used_cover_categories: set[str] | None = None,
-        used_title_keys: set[str] | None = None,
+        used_title_axes: set[str] | None = None,
+        used_title_phrases: set[str] | None = None,
     ) -> CourseResultDto:
         places = [
             PlaceResultDto(
@@ -905,10 +909,13 @@ class CreateCourseUseCase:
             used_cover_urls.add(image_url)
         if image_category and used_cover_categories is not None:
             used_cover_categories.add(image_category)
-        main_place = self._select_title_lead_place(course, used_title_keys)
-        main_title_key = self._build_place_title_keyword(main_place)
-        if main_title_key and used_title_keys is not None:
-            used_title_keys.add(main_title_key)
+        main_place = self._select_title_lead_place(course, used_title_axes, used_title_phrases)
+        main_title_axis = self._build_place_title_axis(main_place)
+        main_title_phrase = self._build_place_title_phrase(main_place)
+        if main_title_axis and used_title_axes is not None:
+            used_title_axes.add(main_title_axis)
+        if main_title_phrase and used_title_phrases is not None:
+            used_title_phrases.add(main_title_phrase)
         return CourseResultDto(
             course_id=course_id,
             course_type=course.course_type,
@@ -1119,27 +1126,394 @@ class CreateCourseUseCase:
     ) -> str:
         lead_place = lead_place or self._select_title_lead_place(course)
         secondary_place = self._select_title_secondary_place(course, lead_place)
-        lead_label = self._build_place_title_keyword(lead_place) if lead_place else ""
-        secondary_label = self._build_place_title_keyword(secondary_place) if secondary_place else ""
+        return self._build_course_mood_title(course, time_slot, lead_place, secondary_place)
 
-        if lead_label and secondary_label:
-            if course.course_type == "main":
-                return f"{lead_label}에서 시작해 {secondary_label}까지 즐기는 데이트"
-            if course.course_type == "sub1":
-                return f"{secondary_label}와 {self._with_object_particle(lead_label)} 함께 담은 데이트"
-            return f"{self._with_object_particle(secondary_label)} 즐기고 {lead_label}에서 쉬어가는 데이트"
-        if lead_label:
-            if course.course_type == "main":
-                return f"{self._with_object_particle(lead_label)} 중심으로 여유롭게 이어지는 데이트"
-            if course.course_type == "sub1":
-                return f"{lead_label}의 매력을 가볍게 즐기는 데이트"
-            return f"{lead_label}에서 천천히 분위기를 즐기는 데이트"
-        return self._default_time_title(time_slot)
+    def _build_course_mood_title(
+        self,
+        course: Course,
+        time_slot: TimeSlot,
+        lead_place: Place | None,
+        secondary_place: Place | None,
+    ) -> str:
+        primary_place = lead_place or self._select_title_lead_place(course)
+        if primary_place is None:
+            return self._default_time_title(time_slot)
+
+        primary_label = self._build_title_label(primary_place)
+        primary_axis = self._build_place_title_axis(primary_place)
+        primary_role = self._build_title_role(primary_axis)
+
+        secondary_candidate = secondary_place or self._select_title_secondary_place(course, primary_place)
+        secondary_role_order = self._preferred_secondary_roles(primary_role)
+        secondary_point = self._select_title_point(course, primary_place, secondary_role_order, secondary_candidate)
+
+        if secondary_point is not None:
+            secondary_label = self._build_title_label(secondary_point)
+            secondary_axis = self._build_place_title_axis(secondary_point)
+            secondary_role = self._build_title_role(secondary_axis)
+            title = self._compose_role_based_title(
+                primary_label,
+                primary_axis,
+                primary_role,
+                secondary_label,
+                secondary_axis,
+                secondary_role,
+            )
+            if title:
+                return title
+
+        fallback = self._compose_single_point_title(primary_label, primary_axis, primary_role, time_slot)
+        return fallback or self._default_time_title(time_slot)
+
+    def _select_title_point(
+        self,
+        course: Course,
+        primary_place: Place,
+        preferred_roles: tuple[str, ...],
+        secondary_candidate: Place | None = None,
+    ) -> Place | None:
+        candidates = [cp.place for cp in course.places if cp.place.name != primary_place.name]
+        if secondary_candidate is not None and secondary_candidate.name != primary_place.name:
+            candidates = [secondary_candidate] + [
+                place for place in candidates if place.name != secondary_candidate.name
+            ]
+
+        if not candidates:
+            return None
+
+        for role in preferred_roles:
+            matched = [
+                place
+                for place in candidates
+                if self._build_title_role(self._build_place_title_axis(place)) == role
+            ]
+            if matched:
+                return max(matched, key=lambda place: (self._title_place_priority(place), place.score))
+        return max(candidates, key=lambda place: (self._title_place_priority(place), place.score))
+
+    def _preferred_secondary_roles(self, primary_role: str) -> tuple[str, ...]:
+        mapping = {
+            "meal": ("rest", "activity", "finish", "meal", "other"),
+            "rest": ("activity", "meal", "finish", "rest", "other"),
+            "activity": ("rest", "meal", "finish", "activity", "other"),
+            "finish": ("rest", "meal", "activity", "finish", "other"),
+        }
+        return mapping.get(primary_role, ("rest", "activity", "meal", "finish", "other"))
+
+    def _compose_role_based_title(
+        self,
+        primary_label: str,
+        primary_axis: str,
+        primary_role: str,
+        secondary_label: str,
+        secondary_axis: str,
+        secondary_role: str,
+    ) -> str:
+        if primary_role == "meal" and secondary_role == "rest":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 먹고 {secondary_label}로 마무리",
+                    f"{primary_label} 다음은 {secondary_label}, 밸런스 좋은 데이트",
+                    f"{primary_label}부터 {secondary_label}까지 이어지는 코스",
+                ),
+                primary_label,
+                secondary_label,
+                primary_role,
+                secondary_role,
+            )
+        if primary_role == "meal" and secondary_role == "activity":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 먹고 {secondary_label}까지",
+                    f"{primary_label} 다음은 {secondary_label}, 심심할 틈 없는 코스",
+                    f"{primary_label} 즐긴 뒤 {secondary_label}까지 이어가기",
+                ),
+                primary_label,
+                secondary_label,
+                primary_role,
+                secondary_role,
+            )
+        if primary_role == "rest" and secondary_role == "activity":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 들른 뒤 {secondary_label}까지",
+                    f"{primary_label}로 예열하고 {secondary_label}까지 가는 코스",
+                    f"{primary_label} 한 번 들르고 {secondary_label}까지 이어가기",
+                ),
+                primary_label,
+                secondary_label,
+                primary_role,
+                secondary_role,
+            )
+        if primary_role == "rest" and secondary_role == "meal":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 들르고 {secondary_label}까지",
+                    f"{primary_label}로 시작해 {secondary_label}까지 이어지는 코스",
+                    f"{primary_label} 챙기고 {secondary_label}까지 가는 데이트",
+                ),
+                primary_label,
+                secondary_label,
+                primary_role,
+                secondary_role,
+            )
+        if primary_role == "activity" and secondary_role == "rest":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label}{self._activity_joiner(primary_axis)} {secondary_label}로 쉬어가는 코스",
+                    f"{primary_label}{self._activity_joiner(primary_axis)} {secondary_label}에서 한숨 돌리기",
+                    f"{primary_label}{self._activity_joiner(primary_axis)} {secondary_label}로 여운 잇기",
+                ),
+                primary_label,
+                secondary_label,
+                primary_axis,
+                primary_role,
+                secondary_role,
+            )
+        if primary_role == "activity" and secondary_role == "meal":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label}{self._activity_joiner(primary_axis)} {secondary_label}까지",
+                    f"{primary_label}{self._activity_joiner(primary_axis)} {secondary_label}로 배 채우기",
+                    f"{primary_label}{self._activity_joiner(primary_axis)} {secondary_label}까지 이어지는 코스",
+                ),
+                primary_label,
+                secondary_label,
+                primary_axis,
+                primary_role,
+                secondary_role,
+            )
+        if primary_role == "finish" and secondary_role == "rest":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 즐기고 {secondary_label}로 마무리",
+                    f"{primary_label} 뒤엔 {secondary_label}, 밤 분위기 살리는 코스",
+                    f"{primary_label} 즐긴 다음 {secondary_label}에서 여운 남기기",
+                ),
+                primary_label,
+                secondary_label,
+                primary_role,
+                secondary_role,
+            )
+        if primary_role == "finish" and secondary_role == "meal":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 즐기고 {secondary_label}까지",
+                    f"{primary_label} 뒤에 {secondary_label}까지 챙기는 코스",
+                    f"{primary_label} 즐긴 다음 {secondary_label}까지 이어가기",
+                ),
+                primary_label,
+                secondary_label,
+                primary_role,
+                secondary_role,
+            )
+        if secondary_role == "finish":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label}{self._flow_joiner(primary_role, primary_axis)} {secondary_label}로 마무리",
+                    f"{primary_label}{self._flow_joiner(primary_role, primary_axis)} 마지막은 {secondary_label}",
+                    f"{primary_label}{self._flow_joiner(primary_role, primary_axis)} {secondary_label}까지 가는 코스",
+                ),
+                primary_label,
+                secondary_label,
+                primary_axis,
+                primary_role,
+                secondary_role,
+            )
+        return self._pick_title_variant(
+            (
+                f"{primary_label}{self._flow_joiner(primary_role, primary_axis)} {secondary_label}까지",
+                f"{primary_label}{self._flow_joiner(primary_role, primary_axis)} {secondary_label}로 이어지는 데이트",
+                f"{primary_label}{self._flow_joiner(primary_role, primary_axis)} {secondary_label}까지 가볍게 즐기기",
+            ),
+            primary_label,
+            secondary_label,
+            primary_axis,
+            secondary_axis,
+            primary_role,
+            secondary_role,
+        )
+
+    def _compose_single_point_title(
+        self,
+        primary_label: str,
+        primary_axis: str,
+        primary_role: str,
+        time_slot: TimeSlot,
+    ) -> str:
+        if primary_role == "meal":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 먹고 쉬어가는 코스",
+                    f"{primary_label} 중심으로 가볍게 즐기는 코스",
+                    f"{primary_label} 하나로 기분 내기 좋은 코스",
+                ),
+                primary_label,
+                primary_axis,
+                primary_role,
+                time_slot.value,
+            )
+        if primary_role == "rest":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 들르기 좋은 {self._slot_time_phrase(time_slot)}",
+                    f"{primary_label}에서 여유 보내기 좋은 {self._slot_time_phrase(time_slot)}",
+                    f"{primary_label} 하나로 완성되는 {self._slot_time_phrase(time_slot)}",
+                ),
+                primary_label,
+                primary_axis,
+                primary_role,
+                time_slot.value,
+            )
+        if primary_role == "activity":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label}{self._activity_joiner(primary_axis)} {self._slot_mood_phrase(time_slot)} 코스",
+                    f"{primary_label} 하나로 분위기 나는 {self._slot_time_phrase(time_slot)}",
+                    f"{primary_label} 즐기러 가기 좋은 {self._slot_time_phrase(time_slot)}",
+                ),
+                primary_label,
+                primary_axis,
+                primary_role,
+                time_slot.value,
+            )
+        if primary_role == "finish":
+            return self._pick_title_variant(
+                (
+                    f"{primary_label} 즐기기 좋은 {self._slot_finish_phrase(time_slot)}",
+                    f"{primary_label}로 끝내기 좋은 {self._slot_finish_phrase(time_slot)}",
+                    f"{primary_label}가 메인인 {self._slot_finish_phrase(time_slot)}",
+                ),
+                primary_label,
+                primary_axis,
+                primary_role,
+                time_slot.value,
+            )
+        return f"{primary_label} 즐기기 좋은 코스"
+
+    def _build_title_role(self, axis: str) -> str:
+        role_map = {
+            "food": "meal",
+            "dessert": "rest",
+            "cafe": "rest",
+            "culture": "activity",
+            "walk": "activity",
+            "experience": "activity",
+            "movie": "activity",
+            "activity": "activity",
+            "shopping": "activity",
+            "night": "finish",
+        }
+        return role_map.get(axis, "other")
+
+    def _build_title_label(self, place: Place | None) -> str:
+        if place is None:
+            return ""
+
+        phrase = self._build_place_title_phrase(place)
+        label_map = {
+            "브런치": "브런치",
+            "이자카야": "이자카야",
+            "감자탕": "감자탕",
+            "피자 맛집": "피자 맛집",
+            "버거 맛집": "버거 맛집",
+            "파스타 맛집": "파스타 맛집",
+            "국밥 맛집": "국밥 맛집",
+            "아시안 맛집": "아시안 맛집",
+            "스시 맛집": "스시 맛집",
+            "한식 맛집": "한식 맛집",
+            "맛집": "맛집",
+            "베이커리 카페": "베이커리",
+            "디저트 카페": "디저트",
+            "브런치 카페": "브런치 카페",
+            "카페": "카페",
+            "전시": "전시",
+            "체험": "체험",
+            "산책": "산책",
+            "영화": "영화",
+            "액티비티": "액티비티",
+            "쇼핑": "쇼핑",
+            "야경": "야경",
+            "바": "바",
+            "데이트": "데이트",
+        }
+        base_label = label_map.get(phrase, phrase)
+        if phrase not in _GENERIC_TITLE_PHRASES:
+            return base_label
+
+        hint = self._build_place_hint(place)
+        if not hint or hint in base_label:
+            return base_label
+        return f"{hint} {base_label}"
+
+    def _pick_title_variant(self, candidates: tuple[str, ...], *keys: str) -> str:
+        if not candidates:
+            return ""
+
+        seed = "".join(keys)
+        if not seed:
+            return candidates[0]
+
+        index = sum(ord(char) for char in seed) % len(candidates)
+        return candidates[index]
+
+    def _activity_joiner(self, axis: str) -> str:
+        if axis in {"culture", "movie"}:
+            return " 보고"
+        if axis == "walk":
+            return "하고"
+        if axis == "experience":
+            return "하고"
+        if axis == "shopping":
+            return " 구경하고"
+        return " 즐기고"
+
+    def _flow_joiner(self, role: str, axis: str) -> str:
+        if role == "meal":
+            return " 먹고"
+        if role == "rest":
+            return " 들른 뒤"
+        if role == "activity":
+            return self._activity_joiner(axis)
+        if role == "finish":
+            return " 즐기고"
+        return " 즐기고"
+
+    def _slot_mood_phrase(self, time_slot: TimeSlot) -> str:
+        mapping = {
+            "morning": "가볍게 시작하는",
+            "lunch": "여유로운",
+            "afternoon": "오후에 쉬기 좋은",
+            "evening": "저녁에 머물기 좋은",
+            "late_night": "밤에 들르기 좋은",
+        }
+        return mapping.get(time_slot.value, "머물기 좋은")
+
+    def _slot_time_phrase(self, time_slot: TimeSlot) -> str:
+        mapping = {
+            "morning": "아침 코스",
+            "lunch": "점심 코스",
+            "afternoon": "오후 코스",
+            "evening": "저녁 코스",
+            "late_night": "밤 코스",
+        }
+        return mapping.get(time_slot.value, "코스")
+
+    def _slot_finish_phrase(self, time_slot: TimeSlot) -> str:
+        mapping = {
+            "morning": "아침 코스",
+            "lunch": "점심 코스",
+            "afternoon": "오후 코스",
+            "evening": "저녁 코스",
+            "late_night": "밤 코스",
+        }
+        return mapping.get(time_slot.value, "코스")
 
     def _select_title_lead_place(
         self,
         course: Course,
-        used_title_keys: set[str] | None = None,
+        used_title_axes: set[str] | None = None,
+        used_title_phrases: set[str] | None = None,
     ) -> Place | None:
         ranked = sorted(
             (cp.place for cp in course.places),
@@ -1148,10 +1522,17 @@ class CreateCourseUseCase:
         )
         if not ranked:
             return None
-        if used_title_keys:
+        if used_title_phrases:
+            unused_phrase = [
+                place for place in ranked
+                if self._build_place_title_phrase(place) not in used_title_phrases
+            ]
+            if unused_phrase:
+                return unused_phrase[0]
+        if used_title_axes:
             unused = [
                 place for place in ranked
-                if self._build_place_title_keyword(place) not in used_title_keys
+                if self._build_place_title_axis(place) not in used_title_axes
             ]
             if unused:
                 return unused[0]
@@ -1161,10 +1542,10 @@ class CreateCourseUseCase:
         if lead_place is None:
             return None
 
-        lead_title_key = self._build_place_title_keyword(lead_place)
+        lead_title_axis = self._build_place_title_axis(lead_place)
         candidates = [cp.place for cp in course.places if cp.place.name != lead_place.name]
         differentiated = [
-            place for place in candidates if self._build_place_title_keyword(place) != lead_title_key
+            place for place in candidates if self._build_place_title_axis(place) != lead_title_axis
         ]
         pool = differentiated or candidates
         if not pool:
@@ -1187,16 +1568,30 @@ class CreateCourseUseCase:
                 return "브런치"
             if "이자카야" in text or "포차" in text or "술집" in text:
                 return "이자카야"
+            if "감자탕" in text:
+                return "감자탕"
             if "피자" in text:
                 return "피자 맛집"
             if "버거" in text:
                 return "버거 맛집"
+            if any(keyword in text for keyword in ("파스타", "리조또")):
+                return "파스타 맛집"
+            if any(keyword in text for keyword in ("국밥", "해장국", "순대국")):
+                return "국밥 맛집"
+            if any(keyword in text for keyword in ("쌀국수", "분짜", "팟타이", "베트남")):
+                return "아시안 맛집"
+            if any(keyword in text for keyword in ("스시", "초밥", "오마카세")):
+                return "스시 맛집"
+            if any(keyword in text for keyword in ("한식", "백반", "한정식")):
+                return "한식 맛집"
             return "맛집"
 
         if place.category == "cafe":
             if "와인바" in text or "칵테일바" in text or "lp바" in text:
                 return "바"
-            if "디저트" in text or "베이커리" in text or "빙수" in text:
+            if "베이커리" in text:
+                return "베이커리 카페"
+            if "디저트" in text or "빙수" in text:
                 return "디저트 카페"
             if "브런치" in text:
                 return "브런치 카페"
@@ -1243,6 +1638,35 @@ class CreateCourseUseCase:
             return phrase
         return f"{hint} {phrase}"
 
+    def _build_place_title_axis(self, place: Place | None) -> str:
+        phrase = self._build_place_title_phrase(place)
+        axis_map = {
+            "브런치": "food",
+            "이자카야": "food",
+            "감자탕": "food",
+            "피자 맛집": "food",
+            "버거 맛집": "food",
+            "파스타 맛집": "food",
+            "국밥 맛집": "food",
+            "아시안 맛집": "food",
+            "스시 맛집": "food",
+            "한식 맛집": "food",
+            "맛집": "food",
+            "베이커리 카페": "dessert",
+            "디저트 카페": "dessert",
+            "브런치 카페": "cafe",
+            "카페": "cafe",
+            "전시": "culture",
+            "체험": "experience",
+            "산책": "walk",
+            "영화": "movie",
+            "액티비티": "activity",
+            "쇼핑": "shopping",
+            "야경": "night",
+            "바": "night",
+        }
+        return axis_map.get(phrase, "other")
+
     def _build_place_hint(self, place: Place | None) -> str:
         if place is None:
             return ""
@@ -1251,10 +1675,18 @@ class CreateCourseUseCase:
         if not name:
             return ""
         name = re.sub(r"\s+(본점|별관|1호점|2호점)$", "", name).strip()
-        if len(name) <= 12:
+        tokens = name.split()
+        first_token = tokens[0]
+        if self._is_major_franchise_hint(first_token):
+            return first_token
+        if len(tokens) >= 2 and len(name) > 8:
+            return first_token[:8]
+        if len(name) <= 8:
             return name
-        first_token = name.split()[0]
-        return first_token[:12]
+        return name[:8]
+
+    def _is_major_franchise_hint(self, text: str) -> bool:
+        return text in _MAJOR_FRANCHISE
 
     def _title_place_priority(self, place: Place) -> int:
         phrase = self._build_place_title_phrase(place)
@@ -1266,13 +1698,20 @@ class CreateCourseUseCase:
             "산책": 8,
             "쇼핑": 8,
             "야경": 8,
+            "베이커리 카페": 7,
             "디저트 카페": 7,
             "브런치 카페": 7,
             "브런치": 7,
             "이자카야": 7,
+            "감자탕": 7,
             "바": 7,
             "피자 맛집": 6,
             "버거 맛집": 6,
+            "파스타 맛집": 6,
+            "국밥 맛집": 6,
+            "아시안 맛집": 6,
+            "스시 맛집": 6,
+            "한식 맛집": 6,
             "카페": 5,
             "맛집": 5,
             "데이트": 4,
@@ -1289,22 +1728,6 @@ class CreateCourseUseCase:
         }
         return default_map.get(time_slot.value, "데이트 코스")
 
-    def _join_with_pair_particle(self, first: str, second: str) -> str:
-        particle = "과" if self._has_final_consonant(first) else "와"
-        return f"{first}{particle} {second}"
-
-    def _with_object_particle(self, text: str) -> str:
-        particle = "을" if self._has_final_consonant(text) else "를"
-        return f"{text}{particle}"
-
-    def _has_final_consonant(self, text: str) -> bool:
-        stripped = text.strip()
-        if not stripped:
-            return False
-        last = stripped[-1]
-        if not ("가" <= last <= "힣"):
-            return False
-        return (ord(last) - ord("가")) % 28 != 0
 
     def _select_course_cover_image_v2(
         self,
