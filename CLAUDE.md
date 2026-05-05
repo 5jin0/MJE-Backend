@@ -1,12 +1,12 @@
 # Project Overview
 
-Pioneer Team Backend — a Python FastAPI application.
+Pioneer Team Backend — 20~30대 맞춤 데이트코스 추천 서비스 (Python FastAPI)
 
 ---
 
 # Commands
 
-- Run dev server: `uvicorn main:app --reload --host 0.0.0.0 --port 33333`
+- Run dev server: `uvicorn main:app --reload --host 0.0.0.0 --port 8080`
 - Run directly: `python main.py`
 
 ---
@@ -28,8 +28,31 @@ Pioneer Team Backend — a Python FastAPI application.
 
 # 다음과 같은 프로젝트 구조를 따른다
 
+```
 app
  ├ domains
+ │   ├ home
+ │   │   ├ domain
+ │   │   │   ├ entity
+ │   │   │   ├ value_object
+ │   │   │   ├ events               ← home_events (view_home, logo_click, home_click)
+ │   │   │   └ service
+ │   │   │
+ │   │   ├ service
+ │   │   │   ├ usecase
+ │   │   │   └ dto
+ │   │   │       ├ request
+ │   │   │       └ response
+ │   │   │
+ │   │   ├ controller
+ │   │   │   └ api
+ │   │   │       ├ request_form
+ │   │   │       └ response_form
+ │   │   │
+ │   │   └ repository
+ │   │       ├ orm
+ │   │       └ mapper
+ │   │
  │   ├ recommendation
  │   │   ├ domain
  │   │   │   ├ entity
@@ -51,31 +74,11 @@ app
  │   │       ├ orm
  │   │       └ mapper
  │   │
- │   ├ export
- │   │   ├ domain
- │   │   │   ├ entity
- │   │   │   ├ value_object
- │   │   │   └ service
- │   │   │
- │   │   ├ service
- │   │   │   ├ usecase
- │   │   │   └ dto
- │   │   │       ├ request
- │   │   │       └ response
- │   │   │
- │   │   ├ controller
- │   │   │   └ api
- │   │   │       ├ request_form
- │   │   │       └ response_form
- │   │   │
- │   │   └ repository
- │   │       ├ orm
- │   │       └ mapper
- │   │
- │   └ tracking
+ │   └ courses
  │       ├ domain
  │       │   ├ entity
  │       │   ├ value_object
+ │       │   ├ events               ← courses_events (course_create, card_click, tryagain_click, optioncard_click, return_click)
  │       │   └ service
  │       │
  │       ├ service
@@ -96,10 +99,36 @@ app
  ├ infrastructure
  │   ├ database
  │   ├ cache
- │   ├ external
+ │   ├ api
+ │   │   └ export_logs              ← export_logs (course_export, course_send, export_close)
  │   └ config
  │
  └ main.py
+```
+
+---
+
+# 도메인 이벤트 목록
+
+## home_events
+- `view_home` — 홈 화면 진입
+- `logo_click` — 로고 클릭
+- `home_click` — 홈 버튼 클릭
+
+## courses_events
+- `course_create` — 코스 생성
+- `card_click` — 코스 카드 클릭
+- `tryagain_click` — 다시 시도 클릭
+- `optioncard_click` — 옵션 카드 클릭
+- `return_click` — 뒤로가기 클릭
+
+## export_logs (infrastructure/api)
+- `course_export` — 코스 내보내기
+- `course_send` — 코스 공유/전송
+- `export_close` — 내보내기 닫기
+
+> 이벤트는 별도 tracking 도메인 없이 각 도메인 내 domain/events에 정의한다.
+> export_logs는 인프라 레벨 로그이므로 infrastructure/api/export_logs에 위치한다.
 
 ---
 
@@ -127,6 +156,7 @@ app
 - 비즈니스 규칙의 단일 소스
 - 상태 + 불변성 + 규칙 보장
 - 외부 의존성 없음
+- Domain Event 정의 포함 (domain/events)
 
 ---
 
@@ -136,6 +166,7 @@ app
 - Domain 객체 orchestration
 - 트랜잭션 경계 설정
 - Repository 호출
+- Domain Event 발행
 
 > Service는 "로직 계층"이 아니라 "흐름 계층"이다
 
@@ -161,6 +192,7 @@ app
 ### Infrastructure
 
 - DB / Cache / External API / Config 포함
+- export_logs 포함 (infrastructure/api/export_logs)
 
 ---
 
@@ -218,9 +250,9 @@ app
 
 ## 금지
 
-    recommendation.domain → export.domain X
-    recommendation.service → tracking.service X
-    recommendation.service -> export.repository O
+    home.domain → courses.domain X
+    recommendation.service → courses.service X
+    recommendation.service → courses.repository O
 
 ---
 
@@ -275,6 +307,7 @@ app
 - Entity
 - Value Object
 - Domain Service
+- Domain Event (domain/events)
 - Business Rule
 
 ## MUST
@@ -299,6 +332,7 @@ app
 - Domain 객체 생성 및 조작
 - Repository 호출
 - 트랜잭션 경계 정의
+- Domain Event 발행
 
 ## MUST
 
@@ -395,6 +429,7 @@ app
 - Redis Client
 - External API Client
 - 환경 변수 설정
+- export_logs (course_export, course_send, export_close)
 
 ---
 
@@ -432,9 +467,10 @@ app
 
 예:
 
+- GetHomeUseCase
 - GetRecommendationUseCase
-- CreateExportUseCase
-- TrackEventUseCase
+- CreateCourseUseCase
+- ExportCourseUseCase
 
 ## DTO
 
@@ -476,19 +512,14 @@ app
 
 # Event 처리 규칙
 
-## 목적
+## 원칙
 
-- 도메인 간 결합도 감소
-- 비동기 처리 지원
-
-## 사용 시점
-
-- 사이드 이펙트 (알림, 로그, 외부 API)
-- 다른 도메인 트리거
+- 이벤트는 별도 tracking 도메인 없이 각 도메인 내에 위치한다
+- export_logs는 infrastructure/api/export_logs에 위치한다
 
 ## 구조
 
-- Domain Event 정의
+- Domain Event 정의: domain/events
 - Service에서 Event 발행
 - Event Handler에서 처리
 

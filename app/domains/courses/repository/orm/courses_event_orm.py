@@ -1,19 +1,15 @@
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
 
-from sqlalchemy import BigInteger, DateTime, Index, String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from app.infrastructure.database.base import Base
+from app.infrastructure.database.database import Base
 
 
 class CoursesEventOrm(Base):
     __tablename__ = "courses_events"
-    __table_args__ = (
-        Index("idx_courses_session_id", "session_id"),
-        Index("idx_courses_event_name", "event_name"),
-    )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    event_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    session_id: Mapped[str] = mapped_column(String(100), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    event_name = Column(String(50), nullable=False)
+    session_id = Column(String(255), nullable=False)
+    timestamp = Column(String(50), nullable=False)
+    page_path = Column(String(500), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)

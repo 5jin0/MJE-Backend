@@ -1,83 +1,97 @@
-from __future__ import annotations
-
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
 from app.domains.recommendation.service.dto.response.get_course_detail_response_dto import (
     GetCourseDetailResponseDto,
-    PlaceDetailDto,
-    SubCourseDto,
 )
 
 
-class PlaceDetailItem(BaseModel):
-    visitOrder: int
+class CourseDetailPlaceResponseForm(BaseModel):
+    order: int
+    place_type: str
+    id: int
     name: str
     category: str
-    durationMinutes: int
-    photoUrl: Optional[str]
-    description: Optional[str]
-    routeDistanceM: Optional[int]
-    routeDurationMin: Optional[int]
-    routeTransport: Optional[str]
-    routePolyline: Optional[str]
+    road_address: str
+    address: str
+    mapx: str
+    mapy: str
+    link: str
+    telephone: str
+    keyword: str
+    image_url: Optional[str]
+    start_time: str
+    end_time: str
+    duration_minutes: int
+    move_time_to_next_minutes: Optional[int]
+    short_description: str
 
 
-class SubCourseItem(BaseModel):
-    courseId: str
-    courseType: str
+class OtherCourseResponseForm(BaseModel):
+    course_id: str
+    grade: str
     title: str
-    routeSummary: str
-    locationSummary: str
-    totalDuration: int
+    route_summary: str
+    area: str
+    estimated_duration_minutes: int
 
 
 class GetCourseDetailResponseForm(BaseModel):
-    courseId: str
+    course_id: str
+    grade: str
+    area: str
+    start_time: str
+    transport: str
     title: str
     description: str
-    totalDuration: int
-    locationSummary: str
-    routeSummary: str
-    places: list[PlaceDetailItem]
-    subCourses: list[SubCourseItem]
+    estimated_duration_minutes: int
+    places: List[CourseDetailPlaceResponseForm]
+    other_courses: List[OtherCourseResponseForm]
 
     @classmethod
-    def from_response(cls, dto: GetCourseDetailResponseDto) -> GetCourseDetailResponseForm:
+    def from_response(cls, dto: GetCourseDetailResponseDto) -> "GetCourseDetailResponseForm":
         return cls(
-            courseId=dto.course_id,
+            course_id=dto.course_id,
+            grade=dto.grade,
+            area=dto.area,
+            start_time=dto.start_time,
+            transport=dto.transport,
             title=dto.title,
             description=dto.description,
-            totalDuration=dto.total_duration,
-            locationSummary=dto.location_summary,
-            routeSummary=dto.route_summary,
-            places=[cls._map_place(p) for p in dto.places],
-            subCourses=[cls._map_sub_course(s) for s in dto.sub_courses],
-        )
-
-    @classmethod
-    def _map_place(cls, dto: PlaceDetailDto) -> PlaceDetailItem:
-        return PlaceDetailItem(
-            visitOrder=dto.visit_order,
-            name=dto.name,
-            category=dto.category,
-            durationMinutes=dto.duration_minutes,
-            photoUrl=dto.photo_url,
-            description=dto.description,
-            routeDistanceM=dto.route_distance_m,
-            routeDurationMin=dto.route_duration_min,
-            routeTransport=dto.route_transport,
-            routePolyline=dto.route_polyline,
-        )
-
-    @classmethod
-    def _map_sub_course(cls, dto: SubCourseDto) -> SubCourseItem:
-        return SubCourseItem(
-            courseId=dto.course_id,
-            courseType=dto.course_type,
-            title=dto.title,
-            routeSummary=dto.route_summary,
-            locationSummary=dto.location_summary,
-            totalDuration=dto.total_duration,
+            estimated_duration_minutes=dto.estimated_duration_minutes,
+            places=[
+                CourseDetailPlaceResponseForm(
+                    order=p.order,
+                    place_type=p.place_type,
+                    id=p.id,
+                    name=p.name,
+                    category=p.category,
+                    road_address=p.road_address,
+                    address=p.address,
+                    mapx=p.mapx,
+                    mapy=p.mapy,
+                    link=p.link,
+                    telephone=p.telephone,
+                    keyword=p.keyword,
+                    image_url=p.image_url,
+                    start_time=p.start_time,
+                    end_time=p.end_time,
+                    duration_minutes=p.duration_minutes,
+                    move_time_to_next_minutes=p.move_time_to_next_minutes,
+                    short_description=p.short_description,
+                )
+                for p in dto.places
+            ],
+            other_courses=[
+                OtherCourseResponseForm(
+                    course_id=o.course_id,
+                    grade=o.grade,
+                    title=o.title,
+                    route_summary=o.route_summary,
+                    area=o.area,
+                    estimated_duration_minutes=o.estimated_duration_minutes,
+                )
+                for o in dto.other_courses
+            ],
         )

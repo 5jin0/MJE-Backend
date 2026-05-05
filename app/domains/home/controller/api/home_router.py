@@ -1,18 +1,21 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.home.controller.api.request_form.track_event_request_form import TrackEventRequestForm
-from app.domains.home.controller.api.response_form.track_event_response_form import TrackEventResponseForm
-from app.domains.home.service.usecase.track_event_usecase import TrackEventUseCase
-from app.infrastructure.dependencies import get_home_track_event_usecase
+from app.domains.home.controller.api.request_form.home_event_request_form import HomeEventRequestForm
+from app.domains.home.controller.api.response_form.home_event_response_form import HomeEventResponseForm
+from app.domains.home.repository.mysql_home_event_repository import MysqlHomeEventRepository
+from app.domains.home.service.usecase.record_home_event_usecase import RecordHomeEventUseCase
+from app.infrastructure.database.database import get_db
 
 router = APIRouter(prefix="/home", tags=["home"])
 
 
-@router.post("/events", response_model=TrackEventResponseForm)
-async def track_event(
-    form: TrackEventRequestForm,
-    usecase: TrackEventUseCase = Depends(get_home_track_event_usecase),
-) -> TrackEventResponseForm:
-    dto = form.to_request()
-    result = await usecase.execute(dto)
-    return TrackEventResponseForm.from_response(result)
+@router.post("/events", response_model=HomeEventResponseForm, status_code=200)
+async def record_home_event(
+    form: HomeEventRequestForm,
+    db: AsyncSession = Depends(get_db),
+) -> HomeEventResponseForm:
+    repository = MysqlHomeEventRepository(db)
+    usecase = RecordHomeEventUseCase(repository)
+    dto = await usecase.execute(form.to_request())
+    return HomeEventResponseForm.from_response(dto)

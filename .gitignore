@@ -1,3 +1,8 @@
 .env
+settings.json
+settings.local.json
+.claude/commands/
 __pycache__/
 *.pyc
+.venv/
+.pytest_cache/

@@ -1,40 +1,48 @@
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
-class PlaceDetailDto:
-    visit_order: int
+class CourseDetailPlaceDto:
+    order: int
+    place_type: str
+    id: int
     name: str
     category: str
+    road_address: str
+    address: str
+    mapx: str
+    mapy: str
+    link: str
+    telephone: str
+    keyword: str
+    image_url: Optional[str]
+    start_time: str
+    end_time: str
     duration_minutes: int
-    photo_url: Optional[str]
-    description: Optional[str]
-    route_distance_m: Optional[int]
-    route_duration_min: Optional[int]
-    route_transport: Optional[str]
-    route_polyline: Optional[str]
+    move_time_to_next_minutes: Optional[int]
+    short_description: str
 
 
 @dataclass
-class SubCourseDto:
+class OtherCourseDto:
     course_id: str
-    course_type: str
+    grade: str
     title: str
     route_summary: str
-    location_summary: str
-    total_duration: int
+    area: str
+    estimated_duration_minutes: int
 
 
 @dataclass
 class GetCourseDetailResponseDto:
     course_id: str
+    grade: str
+    area: str
+    start_time: str
+    transport: str
     title: str
     description: str
-    total_duration: int
-    location_summary: str
-    route_summary: str
-    places: list[PlaceDetailDto] = field(default_factory=list)
-    sub_courses: list[SubCourseDto] = field(default_factory=list)
+    estimated_duration_minutes: int
+    places: List[CourseDetailPlaceDto] = field(default_factory=list)
+    other_courses: List[OtherCourseDto] = field(default_factory=list)
