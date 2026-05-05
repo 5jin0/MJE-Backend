@@ -20,17 +20,11 @@ from app.domains.recommendation.service.dto.response.get_recommendation_response
     GetRecommendationResponseDto,
 )
 from app.domains.recommendation.service.geocoding_client_interface import GeocodingClientInterface
-from app.domains.recommendation.service.image_search_client_interface import (
-    ImageSearchClientInterface,
-)
 from app.domains.recommendation.service.mapper.recommendation_response_mapper import (
     RecommendationResponseMapper,
 )
 from app.domains.recommendation.service.place_candidate_collector import PlaceCandidateCollector
 from app.domains.recommendation.service.search_client_interface import SearchClientInterface
-from app.domains.recommendation.service.usecase.enrich_course_images_usecase import (
-    EnrichCourseImagesUseCase,
-)
 
 
 class GetRecommendationUseCase:
@@ -38,7 +32,6 @@ class GetRecommendationUseCase:
         self,
         session_repository: RecommendationSessionRepositoryInterface,
         search_client: SearchClientInterface,
-        image_search_client: ImageSearchClientInterface,
         candidate_cache: Optional[CandidateCacheInterface] = None,
         geocoding_client: Optional[GeocodingClientInterface] = None,
     ) -> None:
@@ -48,7 +41,6 @@ class GetRecommendationUseCase:
         self._ordering_service = CourseOrderingService()
         self._selector = CourseSelectorService()
         self._mapper = RecommendationResponseMapper()
-        self._image_enricher = EnrichCourseImagesUseCase(image_search_client)
         self._candidate_cache = candidate_cache
         self._geocoding_client = geocoding_client
 
@@ -106,7 +98,6 @@ class GetRecommendationUseCase:
             shortage_reasons.append("조건에 맞는 추천 코스를 만들지 못했어요. 다른 지역이나 시간대로 다시 시도해 보세요.")
 
         response = self._mapper.to_response_dto(best, optionals, shortage_reasons)
-        response = await self._image_enricher.execute(response, dto.area)
 
         if response.courses:
             asyncio.create_task(
