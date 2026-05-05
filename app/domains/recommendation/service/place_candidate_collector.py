@@ -1,9 +1,10 @@
 import asyncio
 import logging
+import math
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from app.domains.recommendation.domain.value_object.candidate_place import CandidatePlace
 from app.domains.recommendation.service.place_search_query_builder import (
@@ -14,8 +15,48 @@ from app.domains.recommendation.service.search_client_interface import SearchCli
 
 _MIN_REQUIRED = 5
 _DISPLAY_PER_QUERY = 10
+_FILTER_RADIUS_KM = 3.0
+_KR_LON_RANGE = (124.0, 132.0)
+_KR_LAT_RANGE = (33.0, 39.0)
 _HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
 _logger = logging.getLogger(__name__)
+
+
+def _parse_wgs84(mapx: str, mapy: str) -> Optional[Tuple[float, float]]:
+    try:
+        x, y = float(mapx), float(mapy)
+        for factor in (1, 10_000, 10_000_000):
+            lx, ly = x / factor, y / factor
+            if _KR_LON_RANGE[0] <= lx <= _KR_LON_RANGE[1] and _KR_LAT_RANGE[0] <= ly <= _KR_LAT_RANGE[1]:
+                return lx, ly
+        return None
+    except (ValueError, ZeroDivisionError):
+        return None
+
+
+def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+def _filter_by_radius(
+    places: List[CandidatePlace],
+    center: Tuple[float, float],
+    radius_km: float,
+) -> List[CandidatePlace]:
+    center_lon, center_lat = center
+    result = []
+    for place in places:
+        coords = _parse_wgs84(place.mapx, place.mapy)
+        if coords is None:
+            result.append(place)
+            continue
+        if _haversine_km(coords[0], coords[1], center_lon, center_lat) <= radius_km:
+            result.append(place)
+    return result
 
 
 def _strip_html(text: str) -> str:
@@ -39,8 +80,12 @@ class PlaceCandidateCollector:
         self._client = client
         self._query_builder = PlaceSearchQueryBuilder()
 
-    async def collect(self, area: str) -> PlaceCandidateCollection:
-        _logger.info("[Collector] start: area=%r", area)
+    async def collect(
+        self,
+        area: str,
+        center_coords: Optional[Tuple[float, float]] = None,
+    ) -> PlaceCandidateCollection:
+        _logger.info("[Collector] start: area=%r center_coords=%s", area, center_coords)
         loop = asyncio.get_running_loop()
 
         restaurants, cafes, activities = await asyncio.gather(
@@ -48,6 +93,11 @@ class PlaceCandidateCollector:
             loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_cafe_queries(area)),
             loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_activity_queries(area)),
         )
+
+        if center_coords:
+            restaurants = _filter_by_radius(restaurants, center_coords, _FILTER_RADIUS_KM)
+            cafes = _filter_by_radius(cafes, center_coords, _FILTER_RADIUS_KM)
+            activities = _filter_by_radius(activities, center_coords, _FILTER_RADIUS_KM)
 
         _logger.info(
             "[Collector] done: area=%r restaurants=%d cafes=%d activities=%d",

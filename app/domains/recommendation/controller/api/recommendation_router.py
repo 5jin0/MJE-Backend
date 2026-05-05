@@ -23,6 +23,7 @@ from app.domains.recommendation.service.usecase.get_course_detail_usecase import
 from app.domains.recommendation.service.usecase.get_recommendation_usecase import (
     GetRecommendationUseCase,
 )
+from app.infrastructure.api.geocoding.naver_geocoding_client import NaverGeocodingClient
 from app.infrastructure.api.image_search.naver_image_search_client import NaverImageSearchClient
 from app.infrastructure.api.search.naver_search_client import NaverSearchClient
 from app.infrastructure.cache.redis_candidate_cache import RedisCandidateCache
@@ -51,11 +52,16 @@ async def _get_recommendation_usecase(
     )
     redis_client = await get_redis()
     candidate_cache = RedisCandidateCache(redis_client)
+    geocoding_client = NaverGeocodingClient(
+        client_id=settings.NAVER_MAP_CLIENT_ID,
+        client_secret=settings.NAVER_MAP_CLIENT_SECRET,
+    )
     return GetRecommendationUseCase(
         session_repository=repository,
         search_client=search_client,
         image_search_client=image_search_client,
         candidate_cache=candidate_cache,
+        geocoding_client=geocoding_client,
     )
 
 

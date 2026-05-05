@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import Optional, Tuple
 
 from app.domains.recommendation.domain.service.course_candidate_generator_service import (
     CourseCandidateGeneratorService,
@@ -19,6 +19,7 @@ from app.domains.recommendation.service.dto.request.get_recommendation_request_d
 from app.domains.recommendation.service.dto.response.get_recommendation_response_dto import (
     GetRecommendationResponseDto,
 )
+from app.domains.recommendation.service.geocoding_client_interface import GeocodingClientInterface
 from app.domains.recommendation.service.image_search_client_interface import (
     ImageSearchClientInterface,
 )
@@ -39,6 +40,7 @@ class GetRecommendationUseCase:
         search_client: SearchClientInterface,
         image_search_client: ImageSearchClientInterface,
         candidate_cache: Optional[CandidateCacheInterface] = None,
+        geocoding_client: Optional[GeocodingClientInterface] = None,
     ) -> None:
         self._session_repository = session_repository
         self._collector = PlaceCandidateCollector(search_client)
@@ -48,14 +50,31 @@ class GetRecommendationUseCase:
         self._mapper = RecommendationResponseMapper()
         self._image_enricher = EnrichCourseImagesUseCase(image_search_client)
         self._candidate_cache = candidate_cache
+        self._geocoding_client = geocoding_client
+
+    async def _geocode(self, area: str) -> Optional[Tuple[float, float]]:
+        if not self._geocoding_client:
+            return None
+        loop = asyncio.get_running_loop()
+        try:
+            return await loop.run_in_executor(None, self._geocoding_client.geocode, area)
+        except Exception:
+            return None
+
+    async def _get_cached_collection(self, area: str):
+        if not self._candidate_cache:
+            return None
+        return await self._candidate_cache.get(area)
 
     async def execute(self, dto: GetRecommendationRequestDto) -> GetRecommendationResponseDto:
-        collection = None
-        if self._candidate_cache:
-            collection = await self._candidate_cache.get(dto.area)
+        # Geocoding + 캐시 조회 병렬 실행
+        center_coords, collection = await asyncio.gather(
+            self._geocode(dto.area),
+            self._get_cached_collection(dto.area),
+        )
 
         if collection is None:
-            collection = await self._collector.collect(dto.area)
+            collection = await self._collector.collect(dto.area, center_coords)
             if self._candidate_cache:
                 asyncio.create_task(self._candidate_cache.set(dto.area, collection))
         candidates, candidate_shortages = self._candidate_generator.generate(
