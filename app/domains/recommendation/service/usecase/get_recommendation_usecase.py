@@ -67,13 +67,14 @@ class GetRecommendationUseCase:
         return await self._candidate_cache.get(area)
 
     async def execute(self, dto: GetRecommendationRequestDto) -> GetRecommendationResponseDto:
-        # Geocoding + 캐시 조회 병렬 실행
-        center_coords, collection = await asyncio.gather(
-            self._geocode(dto.area),
-            self._get_cached_collection(dto.area),
-        )
+        # Geocoding은 백그라운드 시작, 캐시 조회를 먼저 기다림
+        geocode_task = asyncio.create_task(self._geocode(dto.area))
+        collection = await self._get_cached_collection(dto.area)
 
-        if collection is None:
+        if collection is not None:
+            geocode_task.cancel()  # 캐시 히트 시 geocoding 불필요
+        else:
+            center_coords = await geocode_task  # 캐시 미스 시에만 geocoding 대기
             collection = await self._collector.collect(dto.area, center_coords)
             if self._candidate_cache:
                 asyncio.create_task(self._candidate_cache.set(dto.area, collection))
