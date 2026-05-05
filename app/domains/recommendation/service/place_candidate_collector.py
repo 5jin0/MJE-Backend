@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional, Set, Tuple
 
+from app.domains.recommendation.domain.value_object.activity_type import ActivityKind
 from app.domains.recommendation.domain.value_object.candidate_place import CandidatePlace
 from app.domains.recommendation.service.place_search_query_builder import (
     PlaceSearchQuery,
@@ -14,7 +15,6 @@ from app.domains.recommendation.service.place_search_query_builder import (
 from app.domains.recommendation.service.search_client_interface import SearchClientInterface
 
 _MIN_REQUIRED = 5
-_MIN_ACTIVITY_PER_TYPE = 3
 _DISPLAY_PER_QUERY = 10
 _FILTER_RADIUS_KM = 3.0
 _KR_LON_RANGE = (124.0, 132.0)
@@ -89,13 +89,18 @@ class PlaceCandidateCollector:
         _logger.info("[Collector] start: area=%r center_coords=%s", area, center_coords)
         loop = asyncio.get_running_loop()
 
-        restaurants, cafes, core_activities, sub_activities = await asyncio.gather(
+        all_kinds = list(ActivityKind)
+        results = await asyncio.gather(
             loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_restaurant_queries(area), _MIN_REQUIRED),
             loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_cafe_queries(area), _MIN_REQUIRED),
-            loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_core_activity_queries(area), _MIN_ACTIVITY_PER_TYPE),
-            loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_sub_activity_queries(area), _MIN_ACTIVITY_PER_TYPE),
+            *[
+                loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_activity_queries_for_kind(area, kind), 1)
+                for kind in all_kinds
+            ],
         )
-        activities = core_activities + sub_activities
+        restaurants = results[0]
+        cafes = results[1]
+        activities = [place for places in results[2:] for place in places]
 
         if center_coords:
             restaurants = _filter_by_radius(restaurants, center_coords, _FILTER_RADIUS_KM)
