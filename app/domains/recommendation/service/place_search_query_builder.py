@@ -43,7 +43,7 @@ _ACTIVITY_TEMPLATES: Dict[str, List[str]] = {
     ActivityKind.KARAOKE.value: ["{area} 노래방"],
     ActivityKind.BAR.value: ["{area} 술집", "{area} 와인바"],
     ActivityKind.NIGHT_VIEW.value: ["{area} 야경", "{area} 야경카페"],
-    ActivityKind.SPORTS.value: ["{area} 볼링", "{area} 스포츠"],
+    ActivityKind.SPORTS.value: ["{area} 볼링", "{area} 클라이밍", "{area} 당구장"],
     ActivityKind.LATE_NIGHT.value: ["{area} 심야 데이트"],
     ActivityKind.BOOK_CAFE.value: ["{area} 북카페", "{area} 만화카페"],
 }
