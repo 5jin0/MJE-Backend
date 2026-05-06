@@ -10,7 +10,7 @@ MIN_CANDIDATES = 5
 
 _DAYTIME_SLOTS: Set[TimeSlot] = {TimeSlot.LUNCH, TimeSlot.AFTERNOON}
 
-# 낮 전용 활동: 보드게임, 전시, 공방, 영화관, 실내 데이트 + 쇼핑/팝업/스포츠
+# 낮 전용 활동: 보드게임, 전시, 공방, 영화관, 만화/북카페 + 쇼핑/팝업/스포츠
 _DAYTIME_KINDS: Set[ActivityKind] = {
     ActivityKind.INDOOR_PLAY,
     ActivityKind.EXHIBITION,
@@ -19,6 +19,7 @@ _DAYTIME_KINDS: Set[ActivityKind] = {
     ActivityKind.SHOPPING,
     ActivityKind.POPUP,
     ActivityKind.SPORTS,
+    ActivityKind.BOOK_CAFE,
 }
 
 # 저녁 전용 활동: 술집, 바, 심야데이트 + 노래방/야경

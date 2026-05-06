@@ -18,6 +18,7 @@ class ActivityKind(Enum):
     # CORE_ACTIVITY — 낮 시간대에도 적합한 실내/야외 활동
     MOVIE      = ("MOVIE",       ActivityType.CORE_ACTIVITY, 120)
     SPORTS     = ("SPORTS",      ActivityType.CORE_ACTIVITY, 120)
+    BOOK_CAFE  = ("BOOK_CAFE",   ActivityType.CORE_ACTIVITY, 90)
 
     # SUB_ACTIVITY — 저녁/심야 시간대에 적합한 활동
     KARAOKE    = ("KARAOKE",     ActivityType.SUB_ACTIVITY, 120)
