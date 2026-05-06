@@ -12,7 +12,7 @@ class TimeSlot(Enum):
         hour, _ = map(int, time_str.split(":"))
         if hour < 14:
             return cls.LUNCH
-        if hour < 18:
+        if hour < 17:
             return cls.AFTERNOON
         if hour < 21:
             return cls.EVENING

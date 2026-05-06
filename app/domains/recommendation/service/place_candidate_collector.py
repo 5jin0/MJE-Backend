@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import logging
 import math
 import re
@@ -17,6 +18,7 @@ from app.domains.recommendation.service.search_client_interface import SearchCli
 _MIN_REQUIRED = 5
 _DISPLAY_PER_QUERY = 10
 _FILTER_RADIUS_KM = 3.0
+_SEARCH_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=20)
 _KR_LON_RANGE = (124.0, 132.0)
 _KR_LAT_RANGE = (33.0, 39.0)
 _HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
@@ -104,10 +106,10 @@ class PlaceCandidateCollector:
 
         all_kinds = list(ActivityKind)
         results = await asyncio.gather(
-            loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_restaurant_queries(area), _MIN_REQUIRED),
-            loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_cafe_queries(area), _MIN_REQUIRED),
+            loop.run_in_executor(_SEARCH_EXECUTOR, self._collect_by_queries, self._query_builder.build_restaurant_queries(area), _MIN_REQUIRED),
+            loop.run_in_executor(_SEARCH_EXECUTOR, self._collect_by_queries, self._query_builder.build_cafe_queries(area), _MIN_REQUIRED),
             *[
-                loop.run_in_executor(None, self._collect_by_queries, self._query_builder.build_activity_queries_for_kind(area, kind), 1)
+                loop.run_in_executor(_SEARCH_EXECUTOR, self._collect_by_queries, self._query_builder.build_activity_queries_for_kind(area, kind), 1)
                 for kind in all_kinds
             ],
         )

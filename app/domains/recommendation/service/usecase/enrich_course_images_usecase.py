@@ -26,7 +26,7 @@ class EnrichCourseImagesUseCase:
             for place in course.places
         ]
         if futures:
-            done, pending = await asyncio.wait(futures, timeout=1.5)
+            done, pending = await asyncio.wait(futures, timeout=0.8)
             for task in pending:
                 task.cancel()
 

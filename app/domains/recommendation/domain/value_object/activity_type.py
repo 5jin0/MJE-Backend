@@ -15,12 +15,15 @@ class ActivityKind(Enum):
     WORKSHOP    = ("WORKSHOP",    ActivityType.CORE_ACTIVITY, 120)
     INDOOR_PLAY = ("INDOOR_PLAY", ActivityType.CORE_ACTIVITY, 120)
 
-    # SUB_ACTIVITY — 시간대/코스 흐름에 따라 보조 사용
-    MOVIE      = ("MOVIE",       ActivityType.SUB_ACTIVITY, 120)
+    # CORE_ACTIVITY — 낮 시간대에도 적합한 실내/야외 활동
+    MOVIE      = ("MOVIE",       ActivityType.CORE_ACTIVITY, 120)
+    SPORTS     = ("SPORTS",      ActivityType.CORE_ACTIVITY, 120)
+    BOOK_CAFE  = ("BOOK_CAFE",   ActivityType.CORE_ACTIVITY, 90)
+
+    # SUB_ACTIVITY — 저녁/심야 시간대에 적합한 활동
     KARAOKE    = ("KARAOKE",     ActivityType.SUB_ACTIVITY, 120)
     BAR        = ("BAR",         ActivityType.SUB_ACTIVITY, 150)
     NIGHT_VIEW = ("NIGHT_VIEW",  ActivityType.SUB_ACTIVITY, 90)
-    SPORTS     = ("SPORTS",      ActivityType.SUB_ACTIVITY, 120)
     LATE_NIGHT = ("LATE_NIGHT",  ActivityType.SUB_ACTIVITY, 150)
 
     def __new__(cls, value: str, activity_type: ActivityType, duration_minutes: int) -> "ActivityKind":
