@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     NAVER_DATALAB_CLIENT_SECRET: str = ""
     NAVER_MAP_CLIENT_ID: str = ""
     NAVER_MAP_CLIENT_SECRET: str = ""
+    KAKAO_MAP_REST_API_KEY: str = ""
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
