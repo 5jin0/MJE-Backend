@@ -27,12 +27,37 @@ _KR_LAT_RANGE = (33.0, 39.0)
 _logger = logging.getLogger(__name__)
 
 _CATEGORY_BLACKLIST = frozenset([
+    # 의료
     "반려동물", "애견", "동물병원", "수의사",
     "병원", "의원", "약국", "한의원", "치과",
+    # 전문직
     "부동산", "공인중개", "법무사", "변호사", "세무",
-    "주유소", "세차", "자동차",
-    "편의점", "마트", "슈퍼마켓",
+    # 생활 인프라
+    "주유소", "세차", "자동차", "주차장", "카센터",
+    # 생필품
+    "편의점", "마트", "슈퍼마켓", "빨래방", "다이소",
+    # 운동
     "헬스", "피트니스", "필라테스", "요가",
+    # 교육
+    "학교", "도서관", "스터디카페", "학원", "독서실",
+    # 유흥
+    "룸싸롱", "단란주점", "유흥주점", "헌팅포차",
+    # 마사지
+    "마사지", "안마",
+    # 공공기관
+    "주민센터", "복지센터", "동사무소", "구청", "시청",
+    "군청", "도청", "세무서", "법원", "검찰청",
+    "경찰서", "소방서", "우체국",
+])
+
+_NAME_BLACKLIST = frozenset([
+    # 커피 프랜차이즈
+    "스타벅스", "투썸플레이스", "이디야", "메가커피", "컴포즈커피",
+    "빽다방", "벤티", "매머드커피", "하삼동커피", "엔제리너스",
+    "할리스", "탐앤탐스", "커피빈", "파스쿠찌", "폴바셋",
+    "드롭탑", "텐퍼센트커피", "바나프레소", "카페베네",
+    # 영화관
+    "메가박스", "롯데시네마", "cgv", "CGV",
 ])
 
 _ACTIVITY_CAFE_EXCLUDE = frozenset(["카페", "커피"])
@@ -44,6 +69,11 @@ _RESTAURANT_CATEGORY_EXCLUDE = frozenset([
 
 def _is_blacklisted(category: str) -> bool:
     return any(bad in category for bad in _CATEGORY_BLACKLIST)
+
+
+def _is_name_blacklisted(name: str) -> bool:
+    name_lower = name.lower()
+    return any(blocked.lower() in name_lower for blocked in _NAME_BLACKLIST)
 
 
 def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
@@ -222,6 +252,8 @@ class PlaceCandidateCollector:
                 if not (raw.road_address or raw.address):
                     continue
                 if _is_blacklisted(raw.category):
+                    continue
+                if _is_name_blacklisted(raw.title):
                     continue
                 if (
                     search_query.place_type == PlaceType.RESTAURANT
