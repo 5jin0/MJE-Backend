@@ -1,87 +1,76 @@
-from typing import Dict, Optional, Set
+from typing import List
 
-from app.domains.recommendation.domain.service.course_ordering_service import OrderedCourseResult
+from app.domains.recommendation.domain.entity.course_candidate import Course, CourseCandidate, CoursePlace
+from app.domains.recommendation.domain.service.duration_calculator_service import DurationCalculatorService
 from app.domains.recommendation.domain.value_object.activity_type import ActivityType
 from app.domains.recommendation.domain.value_object.place_type import PlaceType
-from app.domains.recommendation.domain.value_object.scored_course import (
-    CourseScoreBreakdown,
-    ScoredCourse,
-)
 from app.domains.recommendation.domain.value_object.time_slot import TimeSlot
 from app.domains.recommendation.domain.value_object.transport import Transport
 
-_TIMESLOT_ACTIVITY_SCORES: Dict[TimeSlot, Dict[ActivityType, int]] = {
-    TimeSlot.LUNCH:     {ActivityType.CORE_ACTIVITY: 8, ActivityType.SUB_ACTIVITY: 1},
-    TimeSlot.AFTERNOON: {ActivityType.CORE_ACTIVITY: 7, ActivityType.SUB_ACTIVITY: 3},
-    TimeSlot.EVENING:   {ActivityType.CORE_ACTIVITY: 2, ActivityType.SUB_ACTIVITY: 8},
-    TimeSlot.NIGHT:     {ActivityType.CORE_ACTIVITY: 0, ActivityType.SUB_ACTIVITY: 10},
+_SLOT_NIGHTLIFE_BONUS = {
+    TimeSlot.MORNING: -0.3,
+    TimeSlot.LUNCH: -0.2,
+    TimeSlot.AFTERNOON: -0.1,
+    TimeSlot.EVENING: 0.2,
+    TimeSlot.LATE_NIGHT: 0.3,
 }
 
-_TRANSPORT_SCORES: Dict[Transport, int] = {
-    Transport.WALK: 8,
-    Transport.PUBLIC_TRANSIT: 5,
-    Transport.CAR: 3,
+_SLOT_DAYTIME_BONUS = {
+    TimeSlot.MORNING: 0.2,
+    TimeSlot.LUNCH: 0.3,
+    TimeSlot.AFTERNOON: 0.2,
+    TimeSlot.EVENING: -0.1,
+    TimeSlot.LATE_NIGHT: -0.2,
 }
 
 
 class CourseScorerService:
-    def score(
+    def __init__(self) -> None:
+        self._duration_service = DurationCalculatorService()
+
+    def score_and_build(
         self,
-        ordered_result: OrderedCourseResult,
+        candidate: CourseCandidate,
+        start_time: str,
+        transport: Transport,
+        time_slot: TimeSlot,
+    ) -> Course:
+        course_places = self._duration_service.schedule(candidate, start_time, transport)
+        total_score = self._compute_score(course_places, time_slot, transport)
+        is_valid = self._duration_service.is_valid(course_places)
+
+        return Course(
+            places=course_places,
+            total_score=total_score,
+            is_valid=is_valid,
+        )
+
+    def _compute_score(
+        self,
+        course_places: List[CoursePlace],
         time_slot: TimeSlot,
         transport: Transport,
-        best_place_ids: Optional[Set[int]] = None,
-    ) -> ScoredCourse:
-        breakdown = CourseScoreBreakdown(
-            duration_score=self._duration_score(ordered_result.total_duration_minutes),
-            transport_score=_TRANSPORT_SCORES[transport],
-            time_slot_score=self._time_slot_score(time_slot, ordered_result),
-            diversity_score=self._diversity_score(ordered_result),
-            duplicate_penalty=self._duplicate_penalty(ordered_result, best_place_ids),
-        )
-        return ScoredCourse(ordered_result=ordered_result, score_breakdown=breakdown)
+    ) -> float:
+        places = [cp.place for cp in course_places]
 
-    def _duration_score(self, total: int) -> int:
-        if 300 <= total <= 360:
-            return 10
-        if 270 <= total <= 299 or 361 <= total <= 390:
-            return 5
-        if 391 <= total <= 420:
-            return 2
-        return 0
+        place_score = sum(p.score for p in places) / len(places) if places else 0.0
 
-    def _time_slot_score(self, time_slot: TimeSlot, ordered_result: OrderedCourseResult) -> int:
-        activity_places = [p for p in ordered_result.places if p.place_type == PlaceType.ACTIVITY]
+        duration_score = self._duration_service.duration_score(course_places)
+
+        time_bonus = self._time_slot_bonus(places, time_slot)
+
+        raw = 0.4 * place_score + 0.3 * duration_score + 0.3 * (0.5 + time_bonus)
+        return max(0.0, min(1.0, raw))
+
+    def _time_slot_bonus(self, places, time_slot: TimeSlot) -> float:
+        activity_places = [p for p in places if p.category == PlaceType.ACTIVITY.value]
         if not activity_places:
-            return 3
-        # 나이트라이프(SUB)가 하나라도 있으면 SUB 기준으로 채점 — 낮 시간대 페널티 적용
-        has_sub = any(
-            p.place.activity_kind is not None
-            and p.place.activity_kind.activity_type == ActivityType.SUB_ACTIVITY
+            return 0.0
+
+        has_nightlife = any(
+            p.activity_type == ActivityType.NIGHTLIFE.value
             for p in activity_places
         )
-        key = ActivityType.SUB_ACTIVITY if has_sub else ActivityType.CORE_ACTIVITY
-        return _TIMESLOT_ACTIVITY_SCORES[time_slot][key]
 
-    def _diversity_score(self, ordered_result: OrderedCourseResult) -> int:
-        activity_places = [p for p in ordered_result.places if p.place_type == PlaceType.ACTIVITY]
-        if not activity_places:
-            return 1
-        return 3 if any(p.place.activity_kind is not None for p in activity_places) else 1
-
-    def _duplicate_penalty(
-        self,
-        ordered_result: OrderedCourseResult,
-        best_place_ids: Optional[Set[int]],
-    ) -> int:
-        penalty = 0
-        place_ids = [p.place.id for p in ordered_result.places]
-
-        if len(place_ids) != len(set(place_ids)):
-            penalty -= 10
-
-        if best_place_ids:
-            overlap_count = len(set(place_ids) & best_place_ids)
-            penalty -= overlap_count * 5
-
-        return penalty
+        bonus_map = _SLOT_NIGHTLIFE_BONUS if has_nightlife else _SLOT_DAYTIME_BONUS
+        return bonus_map.get(time_slot, 0.0)

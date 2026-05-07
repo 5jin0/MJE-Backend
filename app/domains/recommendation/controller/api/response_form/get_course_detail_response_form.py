@@ -10,16 +10,15 @@ from app.domains.recommendation.service.dto.response.get_course_detail_response_
 class CourseDetailPlaceResponseForm(BaseModel):
     order: int
     place_type: str
-    id: int
     name: str
     category: str
     road_address: str
     address: str
-    mapx: str
-    mapy: str
+    latitude: float
+    longitude: float
     link: str
     telephone: str
-    keyword: str
+    activity_type: Optional[str]
     image_url: Optional[str]
     start_time: str
     end_time: str
@@ -64,16 +63,15 @@ class GetCourseDetailResponseForm(BaseModel):
                 CourseDetailPlaceResponseForm(
                     order=p.order,
                     place_type=p.place_type,
-                    id=p.id,
                     name=p.name,
                     category=p.category,
                     road_address=p.road_address,
                     address=p.address,
-                    mapx=p.mapx,
-                    mapy=p.mapy,
+                    latitude=p.latitude,
+                    longitude=p.longitude,
                     link=p.link,
                     telephone=p.telephone,
-                    keyword=p.keyword,
+                    activity_type=p.activity_type,
                     image_url=p.image_url,
                     start_time=p.start_time,
                     end_time=p.end_time,

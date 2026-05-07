@@ -10,18 +10,18 @@ from app.domains.recommendation.service.dto.response.get_recommendation_response
 class RecommendationPlaceResponseForm(BaseModel):
     order: int
     place_type: str
-    id: int
     name: str
     category: str
     road_address: str
     address: str
-    mapx: str
-    mapy: str
+    latitude: float
+    longitude: float
     link: str
     telephone: str
-    keyword: str
-    collected_at: str
+    activity_type: Optional[str]
     duration_minutes: int
+    start_time: str
+    end_time: str
     image_url: Optional[str]
 
 
@@ -42,7 +42,26 @@ class GetRecommendationResponseForm(BaseModel):
             RecommendationCourseItemResponseForm(
                 course_id=item.course_id,
                 grade=item.grade,
-                places=[RecommendationPlaceResponseForm(**vars(p)) for p in item.places],
+                places=[
+                    RecommendationPlaceResponseForm(
+                        order=p.order,
+                        place_type=p.place_type,
+                        name=p.name,
+                        category=p.category,
+                        road_address=p.road_address,
+                        address=p.address,
+                        latitude=p.latitude,
+                        longitude=p.longitude,
+                        link=p.link,
+                        telephone=p.telephone,
+                        activity_type=p.activity_type,
+                        duration_minutes=p.duration_minutes,
+                        start_time=p.start_time,
+                        end_time=p.end_time,
+                        image_url=p.image_url,
+                    )
+                    for p in item.places
+                ],
                 image_url=item.image_url,
             )
             for item in dto.courses

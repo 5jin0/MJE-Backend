@@ -1,8 +1,7 @@
 from typing import List, Optional, Tuple
 
-from app.domains.recommendation.domain.service.course_ordering_service import OrderedCourseResult
+from app.domains.recommendation.domain.entity.course_candidate import Course, CourseCandidate
 from app.domains.recommendation.domain.service.course_scorer_service import CourseScorerService
-from app.domains.recommendation.domain.value_object.scored_course import ScoredCourse
 from app.domains.recommendation.domain.value_object.time_slot import TimeSlot
 from app.domains.recommendation.domain.value_object.transport import Transport
 
@@ -13,44 +12,44 @@ class CourseSelectorService:
 
     def select(
         self,
-        ordered_results: List[OrderedCourseResult],
-        time_slot: TimeSlot,
+        candidates: List[CourseCandidate],
+        start_time: str,
         transport: Transport,
-    ) -> Tuple[Optional[ScoredCourse], List[ScoredCourse]]:
-        if not ordered_results:
+        time_slot: TimeSlot,
+    ) -> Tuple[Optional[Course], List[Course]]:
+        if not candidates:
             return None, []
 
         scored = sorted(
-            [self._scorer.score(r, time_slot, transport) for r in ordered_results],
+            [
+                self._scorer.score_and_build(c, start_time, transport, time_slot)
+                for c in candidates
+            ],
             key=lambda c: c.total_score,
             reverse=True,
         )
 
-        best = scored[0]
-        best_ids = best.place_ids()
+        valid = [c for c in scored if c.is_valid]
+        if not valid:
+            valid = scored
 
-        # best 중복 페널티 적용 후 후보 정렬
-        candidates = sorted(
-            [self._scorer.score(c.ordered_result, time_slot, transport, best_ids) for c in scored[1:]],
-            key=lambda c: c.total_score,
-            reverse=True,
-        )
+        best = valid[0]
+        best_keys = best.place_keys()
 
-        if not candidates:
-            return best, []
+        optionals: List[Course] = []
+        for course in valid[1:]:
+            overlap = len(course.place_keys() & best_keys)
+            penalty = overlap * 0.15
+            course.total_score = max(0.0, course.total_score - penalty)
+            optionals.append(course)
 
-        first_optional = candidates[0]
+        optionals.sort(key=lambda c: c.total_score, reverse=True)
 
-        # optional 2는 best + optional 1 모두와의 중복을 페널티
-        avoid_ids = best_ids | first_optional.place_ids()
-        second_candidates = sorted(
-            [self._scorer.score(c.ordered_result, time_slot, transport, avoid_ids) for c in candidates[1:]],
-            key=lambda c: c.total_score,
-            reverse=True,
-        )
+        if len(optionals) >= 2:
+            second_keys = optionals[0].place_keys() | best_keys
+            for course in optionals[1:]:
+                overlap = len(course.place_keys() & second_keys)
+                course.total_score = max(0.0, course.total_score - overlap * 0.15)
+            optionals[1:] = sorted(optionals[1:], key=lambda c: c.total_score, reverse=True)
 
-        optionals = [first_optional]
-        if second_candidates:
-            optionals.append(second_candidates[0])
-
-        return best, optionals
+        return best, optionals[:2]

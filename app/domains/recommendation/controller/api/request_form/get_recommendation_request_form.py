@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -11,10 +11,12 @@ class GetRecommendationRequestForm(BaseModel):
     area: str
     start_time: str
     transport: Literal["walk", "public_transit", "car"]
+    seed: Optional[int] = None
 
     def to_request(self) -> GetRecommendationRequestDto:
         return GetRecommendationRequestDto(
             area=self.area,
             start_time=self.start_time,
             transport=self.transport,
+            seed=self.seed,
         )

@@ -4,7 +4,6 @@ from typing import Optional, Tuple
 from app.domains.recommendation.domain.service.course_candidate_generator_service import (
     CourseCandidateGeneratorService,
 )
-from app.domains.recommendation.domain.service.course_ordering_service import CourseOrderingService
 from app.domains.recommendation.domain.service.course_selector_service import CourseSelectorService
 from app.domains.recommendation.domain.value_object.time_slot import TimeSlot
 from app.domains.recommendation.domain.value_object.transport import Transport
@@ -38,7 +37,6 @@ class GetRecommendationUseCase:
         self._session_repository = session_repository
         self._collector = PlaceCandidateCollector(search_client)
         self._candidate_generator = CourseCandidateGeneratorService()
-        self._ordering_service = CourseOrderingService()
         self._selector = CourseSelectorService()
         self._mapper = RecommendationResponseMapper()
         self._candidate_cache = candidate_cache
@@ -59,43 +57,47 @@ class GetRecommendationUseCase:
         return await self._candidate_cache.get(area)
 
     async def execute(self, dto: GetRecommendationRequestDto) -> GetRecommendationResponseDto:
-        # Geocoding은 백그라운드 시작, 캐시 조회를 먼저 기다림
+        # Step 1: geocoding (background) + cache check
         geocode_task = asyncio.create_task(self._geocode(dto.area))
         collection = await self._get_cached_collection(dto.area)
 
         if collection is not None:
-            geocode_task.cancel()  # 캐시 히트 시 geocoding 불필요
+            geocode_task.cancel()
         else:
-            center_coords = await geocode_task  # 캐시 미스 시에만 geocoding 대기
+            center_coords = await geocode_task
+            # Step 2-3: collect and cache candidates
             collection = await self._collector.collect(dto.area, center_coords)
             if self._candidate_cache:
                 asyncio.create_task(self._candidate_cache.set(dto.area, collection))
+
+        # Step 4: generate course candidates
         candidates, candidate_shortages = self._candidate_generator.generate(
             collection.restaurants,
             collection.cafes,
             collection.activities,
             dto.start_time,
+            seed=dto.seed,
         )
 
+        # Step 5: score and select courses
         transport = Transport(dto.transport)
-        ordered_results = [
-            self._ordering_service.apply_order(candidate, dto.start_time, transport)
-            for candidate in candidates
-        ]
-        valid_results = [result for result in ordered_results if result.is_valid]
+        time_slot = TimeSlot.from_start_time(dto.start_time)
 
         best, optionals = self._selector.select(
-            valid_results,
-            TimeSlot.from_start_time(dto.start_time),
+            candidates,
+            dto.start_time,
             transport,
+            time_slot,
         )
 
         shortage_reasons = [
             *collection.shortage_reasons,
             *candidate_shortages,
         ]
-        if not valid_results:
-            shortage_reasons.append("조건에 맞는 추천 코스를 만들지 못했어요. 다른 지역이나 시간대로 다시 시도해 보세요.")
+        if best is None:
+            shortage_reasons.append(
+                "조건에 맞는 추천 코스를 만들지 못했어요. 다른 지역이나 시간대로 다시 시도해 보세요."
+            )
 
         response = self._mapper.to_response_dto(best, optionals, shortage_reasons)
 

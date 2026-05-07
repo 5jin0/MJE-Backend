@@ -23,8 +23,8 @@ from app.domains.recommendation.service.usecase.get_course_detail_usecase import
 from app.domains.recommendation.service.usecase.get_recommendation_usecase import (
     GetRecommendationUseCase,
 )
-from app.infrastructure.api.geocoding.naver_geocoding_client import NaverGeocodingClient
-from app.infrastructure.api.search.naver_search_client import NaverSearchClient
+from app.infrastructure.api.geocoding.kakao_geocoding_client import KakaoGeocodingClient
+from app.infrastructure.api.search.kakao_search_client import KakaoSearchClient
 from app.infrastructure.cache.redis_candidate_cache import RedisCandidateCache
 from app.infrastructure.cache.redis_client import get_redis
 from app.infrastructure.config.config import settings
@@ -41,16 +41,10 @@ async def _get_session_repository(
 async def _get_recommendation_usecase(
     repository: RecommendationSessionRepositoryInterface = Depends(_get_session_repository),
 ) -> GetRecommendationUseCase:
-    search_client = NaverSearchClient(
-        client_id=settings.NAVER_SEARCH_CLIENT_ID,
-        client_secret=settings.NAVER_SEARCH_CLIENT_SECRET,
-    )
+    search_client = KakaoSearchClient(rest_api_key=settings.KAKAO_MAP_REST_API_KEY)
     redis_client = await get_redis()
     candidate_cache = RedisCandidateCache(redis_client)
-    geocoding_client = NaverGeocodingClient(
-        client_id=settings.NAVER_MAP_CLIENT_ID,
-        client_secret=settings.NAVER_MAP_CLIENT_SECRET,
-    )
+    geocoding_client = KakaoGeocodingClient(rest_api_key=settings.KAKAO_MAP_REST_API_KEY)
     return GetRecommendationUseCase(
         session_repository=repository,
         search_client=search_client,

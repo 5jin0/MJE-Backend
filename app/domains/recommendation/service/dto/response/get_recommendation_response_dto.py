@@ -6,18 +6,18 @@ from typing import List, Optional
 class RecommendationPlaceDto:
     order: int
     place_type: str
-    id: int
     name: str
     category: str
     road_address: str
     address: str
-    mapx: str
-    mapy: str
+    latitude: float
+    longitude: float
     link: str
     telephone: str
-    keyword: str
-    collected_at: str
+    activity_type: Optional[str]
     duration_minutes: int
+    start_time: str
+    end_time: str
     image_url: Optional[str] = None
 
 

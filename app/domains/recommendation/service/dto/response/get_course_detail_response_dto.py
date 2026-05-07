@@ -6,16 +6,15 @@ from typing import List, Optional
 class CourseDetailPlaceDto:
     order: int
     place_type: str
-    id: int
     name: str
     category: str
     road_address: str
     address: str
-    mapx: str
-    mapy: str
+    latitude: float
+    longitude: float
     link: str
     telephone: str
-    keyword: str
+    activity_type: Optional[str]
     image_url: Optional[str]
     start_time: str
     end_time: str

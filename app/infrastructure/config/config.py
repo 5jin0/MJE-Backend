@@ -12,12 +12,7 @@ class Settings(BaseSettings):
     MYSQL_SCHEMA: str
     REDIS_URL: str = "redis://localhost:6379"
     CORS_ORIGINS: list[str] = []
-    NAVER_SEARCH_CLIENT_ID: str = ""
-    NAVER_SEARCH_CLIENT_SECRET: str = ""
-    NAVER_DATALAB_CLIENT_ID: str = ""
-    NAVER_DATALAB_CLIENT_SECRET: str = ""
-    NAVER_MAP_CLIENT_ID: str = ""
-    NAVER_MAP_CLIENT_SECRET: str = ""
+    KAKAO_MAP_REST_API_KEY: str = ""
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""

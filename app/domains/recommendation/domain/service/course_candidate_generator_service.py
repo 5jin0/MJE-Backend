@@ -1,111 +1,137 @@
-from itertools import product
-from typing import List, Set, Tuple
+import random
+from typing import List, Optional, Set, Tuple
 
 from app.domains.recommendation.domain.entity.course_candidate import CourseCandidate
-from app.domains.recommendation.domain.value_object.activity_type import ActivityKind
-from app.domains.recommendation.domain.value_object.candidate_place import CandidatePlace
+from app.domains.recommendation.domain.value_object.activity_type import ActivityType
+from app.domains.recommendation.domain.value_object.place import Place
 from app.domains.recommendation.domain.value_object.time_slot import TimeSlot
 
-MIN_CANDIDATES = 5
+_DAYTIME_SLOTS = {TimeSlot.MORNING, TimeSlot.LUNCH, TimeSlot.AFTERNOON}
 
-_DAYTIME_SLOTS: Set[TimeSlot] = {TimeSlot.LUNCH, TimeSlot.AFTERNOON}
-
-# 낮 전용 활동: 보드게임, 전시, 공방, 영화관, 만화/북카페 + 쇼핑/팝업/스포츠
-_DAYTIME_KINDS: Set[ActivityKind] = {
-    ActivityKind.INDOOR_PLAY,
-    ActivityKind.EXHIBITION,
-    ActivityKind.WORKSHOP,
-    ActivityKind.MOVIE,
-    ActivityKind.SHOPPING,
-    ActivityKind.POPUP,
-    ActivityKind.SPORTS,
-    ActivityKind.BOOK_CAFE,
+_DAYTIME_ACTIVITY_TYPES = {
+    ActivityType.EXHIBITION.value,
+    ActivityType.WALK.value,
+    ActivityType.PARK.value,
+    ActivityType.SHOPPING.value,
+    ActivityType.EXPERIENCE.value,
+    ActivityType.MOVIE.value,
 }
 
-# 저녁 전용 활동: 술집, 바, 심야데이트 + 노래방/야경
-_EVENING_KINDS: Set[ActivityKind] = {
-    ActivityKind.BAR,
-    ActivityKind.LATE_NIGHT,
-    ActivityKind.KARAOKE,
-    ActivityKind.NIGHT_VIEW,
-}
+_NIGHTTIME_ACTIVITY_TYPES = {ActivityType.NIGHTLIFE.value}
+
+_WALK_TYPES = {ActivityType.WALK.value, ActivityType.PARK.value}
+
+_COURSE_COUNT = 6
+_POOL_PER_SLOT = 5
+
+
+def _pick(pool: List[Place], rng: random.Random, exclude_keys: Optional[Set[str]] = None) -> Optional[Place]:
+    candidates = [p for p in pool if (exclude_keys is None or p.place_key not in exclude_keys)]
+    if not candidates:
+        candidates = pool
+    if not candidates:
+        return None
+    return rng.choice(candidates)
 
 
 class CourseCandidateGeneratorService:
     def generate(
         self,
-        restaurant_candidates: List[CandidatePlace],
-        cafe_candidates: List[CandidatePlace],
-        activity_candidates: List[CandidatePlace],
+        restaurants: List[Place],
+        cafes: List[Place],
+        activities: List[Place],
         start_time: str,
+        seed: Optional[int] = None,
     ) -> Tuple[List[CourseCandidate], List[str]]:
+        rng = random.Random(seed)
         time_slot = TimeSlot.from_start_time(start_time)
+
         if time_slot in _DAYTIME_SLOTS:
-            return self._generate_daytime(restaurant_candidates, cafe_candidates, activity_candidates)
-        return self._generate_evening(restaurant_candidates, cafe_candidates, activity_candidates)
+            return self._generate_daytime(restaurants, cafes, activities, rng)
+        return self._generate_evening(restaurants, cafes, activities, rng)
 
     def _generate_daytime(
         self,
-        restaurants: List[CandidatePlace],
-        cafes: List[CandidatePlace],
-        activities: List[CandidatePlace],
+        restaurants: List[Place],
+        cafes: List[Place],
+        activities: List[Place],
+        rng: random.Random,
     ) -> Tuple[List[CourseCandidate], List[str]]:
-        acts = [a for a in activities if a.activity_kind in _DAYTIME_KINDS]
+        day_acts = [a for a in activities if a.activity_type in _DAYTIME_ACTIVITY_TYPES]
+        reasons = self._shortage_reasons(restaurants, cafes, day_acts, "낮 활동")
+
         candidates: List[CourseCandidate] = []
+        for _ in range(_COURSE_COUNT):
+            r = _pick(restaurants, rng)
+            c = _pick(cafes, rng)
+            a = _pick(day_acts or activities, rng)
+            if not (r and c and a):
+                continue
+            used = {r.place_key, c.place_key, a.place_key}
+            if len(used) < 3:
+                continue
 
-        for r, c, a in product(restaurants, cafes, acts):
-            # 3가지 방문 순서: 활동-식당-카페 / 식당-카페-활동 / 식당-활동-카페
-            for ordered in ([a, r, c], [r, c, a], [r, a, c]):
-                if not self._has_duplicate(*ordered):
-                    candidates.append(CourseCandidate(places=list(ordered)))
+            pattern = rng.choice([
+                [a, r, c],
+                [r, c, a],
+                [r, a, c],
+            ])
+            candidates.append(CourseCandidate(places=pattern))
 
-        reasons = self._check_shortages(restaurants, cafes, acts, "활동")
-        if len(candidates) < MIN_CANDIDATES:
-            reasons.append(f"코스 후보가 {MIN_CANDIDATES}개 미만입니다 (현재 {len(candidates)}개)")
+        candidates = self._deduplicate(candidates)
         return candidates, reasons
 
     def _generate_evening(
         self,
-        restaurants: List[CandidatePlace],
-        cafes: List[CandidatePlace],
-        activities: List[CandidatePlace],
+        restaurants: List[Place],
+        cafes: List[Place],
+        activities: List[Place],
+        rng: random.Random,
     ) -> Tuple[List[CourseCandidate], List[str]]:
-        evening_acts = [a for a in activities if a.activity_kind in _EVENING_KINDS]
-        walks = [a for a in activities if a.activity_kind == ActivityKind.WALK]
+        night_acts = [a for a in activities if a.activity_type in _NIGHTTIME_ACTIVITY_TYPES]
+        walk_acts = [a for a in activities if a.activity_type in _WALK_TYPES]
+        reasons = self._shortage_reasons(restaurants, cafes, night_acts, "저녁 활동")
+
         candidates: List[CourseCandidate] = []
+        for _ in range(_COURSE_COUNT):
+            r = _pick(restaurants, rng)
+            c = _pick(cafes, rng)
+            na = _pick(night_acts, rng)
+            wa = _pick(walk_acts or activities, rng)
 
-        # 식당-카페-활동 (술집/노래방/야경/심야)
-        for r, c, a in product(restaurants, cafes, evening_acts):
-            if not self._has_duplicate(r, c, a):
-                candidates.append(CourseCandidate(places=[r, c, a]))
+            if not r:
+                continue
 
-        # 식당-술집-산책
-        for r, a, w in product(restaurants, evening_acts, walks):
-            if not self._has_duplicate(r, a, w):
-                candidates.append(CourseCandidate(places=[r, a, w]))
+            pattern_choices = []
+            if c and na and r.place_key != c.place_key and r.place_key != na.place_key and c.place_key != na.place_key:
+                pattern_choices.append([r, c, na])
+            if na and wa and r.place_key != na.place_key and r.place_key != wa.place_key and na.place_key != wa.place_key:
+                pattern_choices.append([r, na, wa])
+            if c and wa and r.place_key != c.place_key and r.place_key != wa.place_key and c.place_key != wa.place_key:
+                pattern_choices.append([r, c, wa])
 
-        # 식당-카페-산책
-        for r, c, w in product(restaurants, cafes, walks):
-            if not self._has_duplicate(r, c, w):
-                candidates.append(CourseCandidate(places=[r, c, w]))
+            if not pattern_choices:
+                continue
+            candidates.append(CourseCandidate(places=rng.choice(pattern_choices)))
 
-        reasons = self._check_shortages(restaurants, cafes, evening_acts, "저녁 활동")
-        if len(candidates) < MIN_CANDIDATES:
-            reasons.append(f"코스 후보가 {MIN_CANDIDATES}개 미만입니다 (현재 {len(candidates)}개)")
+        candidates = self._deduplicate(candidates)
         return candidates, reasons
 
-    def _has_duplicate(self, *places: CandidatePlace) -> bool:
-        ids = [p.id for p in places]
-        if len(ids) != len(set(ids)):
-            return True
-        name_addresses = [(p.name, p.address) for p in places]
-        return len(name_addresses) != len(set(name_addresses))
+    def _deduplicate(self, candidates: List[CourseCandidate]) -> List[CourseCandidate]:
+        seen: Set[Tuple[str, ...]] = set()
+        unique: List[CourseCandidate] = []
+        for c in candidates:
+            key = tuple(p.place_key for p in c.places)
+            if key not in seen:
+                seen.add(key)
+                unique.append(c)
+        return unique
 
-    def _check_shortages(
+    def _shortage_reasons(
         self,
-        restaurants: List[CandidatePlace],
-        cafes: List[CandidatePlace],
-        activities: List[CandidatePlace],
+        restaurants: List[Place],
+        cafes: List[Place],
+        activities: List[Place],
         activity_label: str,
     ) -> List[str]:
         reasons = []

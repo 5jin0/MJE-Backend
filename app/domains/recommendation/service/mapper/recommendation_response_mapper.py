@@ -1,8 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from app.domains.recommendation.domain.value_object.ordered_place import OrderedPlace
-from app.domains.recommendation.domain.value_object.scored_course import ScoredCourse
+from app.domains.recommendation.domain.entity.course_candidate import Course
 from app.domains.recommendation.service.dto.response.get_recommendation_response_dto import (
     GetRecommendationResponseDto,
     RecommendationCourseItemDto,
@@ -13,8 +12,8 @@ from app.domains.recommendation.service.dto.response.get_recommendation_response
 class RecommendationResponseMapper:
     def to_response_dto(
         self,
-        best: Optional[ScoredCourse],
-        optionals: List[ScoredCourse],
+        best: Optional[Course],
+        optionals: List[Course],
         shortage_reasons: List[str],
     ) -> GetRecommendationResponseDto:
         courses: List[RecommendationCourseItemDto] = []
@@ -30,28 +29,30 @@ class RecommendationResponseMapper:
             shortage_reasons=shortage_reasons,
         )
 
-    def _to_course_item(self, scored: ScoredCourse, grade: str) -> RecommendationCourseItemDto:
+    def _to_course_item(self, course: Course, grade: str) -> RecommendationCourseItemDto:
+        course_id = course.course_id or str(uuid.uuid4())
         return RecommendationCourseItemDto(
-            course_id=str(uuid.uuid4()),
+            course_id=course_id,
             grade=grade,
-            places=[self._to_place_dto(op) for op in scored.ordered_result.places],
+            places=[self._to_place_dto(cp) for cp in course.places],
         )
 
-    def _to_place_dto(self, ordered: OrderedPlace) -> RecommendationPlaceDto:
-        cp = ordered.place
+    def _to_place_dto(self, course_place) -> RecommendationPlaceDto:
+        p = course_place.place
         return RecommendationPlaceDto(
-            order=ordered.order,
-            place_type=cp.place_type.value,
-            id=cp.id,
-            name=cp.name,
-            category=cp.category,
-            road_address=cp.road_address,
-            address=cp.address,
-            mapx=cp.mapx,
-            mapy=cp.mapy,
-            link=cp.link,
-            telephone=cp.telephone,
-            keyword=cp.keyword,
-            collected_at=cp.collected_at,
-            duration_minutes=ordered.duration_minutes,
+            order=course_place.order,
+            place_type=p.category,
+            name=p.name,
+            category=p.category,
+            road_address=p.road_address,
+            address=p.address,
+            latitude=p.latitude,
+            longitude=p.longitude,
+            link=p.link,
+            telephone=p.telephone,
+            activity_type=p.activity_type,
+            duration_minutes=course_place.duration_minutes,
+            start_time=course_place.start_time,
+            end_time=course_place.end_time,
+            image_url=p.image_url,
         )

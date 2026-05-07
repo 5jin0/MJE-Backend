@@ -20,8 +20,8 @@ from app.domains.recommendation.service.dto.response.get_recommendation_response
 
 _SHORT_DESCRIPTIONS: Dict[str, str] = {
     "restaurant": "맛있는 식사로 데이트를 풍성하게 즐기세요.",
-    "cafe":       "분위기 좋은 카페에서 여유로운 시간을 보내세요.",
-    "activity":   "특별한 활동으로 잊지 못할 추억을 만들어보세요.",
+    "cafe": "분위기 좋은 카페에서 여유로운 시간을 보내세요.",
+    "activity": "특별한 활동으로 잊지 못할 추억을 만들어보세요.",
 }
 
 
@@ -48,7 +48,7 @@ class GetCourseDetailUseCase:
             raise NotFoundError(f"course_id '{dto.course_id}' not found")
 
         move_minutes = self._resolve_move_minutes(session.transport)
-        places = self._build_places(selected, session.start_time, move_minutes)
+        places = self._build_places(selected, move_minutes)
         total_duration = sum(p.duration_minutes for p in places) + move_minutes * (len(places) - 1)
 
         place_names = [p.name for p in places]
@@ -77,42 +77,40 @@ class GetCourseDetailUseCase:
     def _build_places(
         self,
         course: RecommendationCourseItemDto,
-        start_time: str,
         move_minutes: int,
     ) -> List[CourseDetailPlaceDto]:
         result = []
-        current_time = start_time
-
         for i, place in enumerate(course.places):
-            duration = place.duration_minutes
-            place_end = _add_minutes(current_time, duration)
             is_last = i == len(course.places) - 1
             move_to_next: Optional[int] = None if is_last else move_minutes
+
+            # Use pre-computed times if available, otherwise fall back to computing
+            start_time = place.start_time
+            end_time = place.end_time
 
             result.append(
                 CourseDetailPlaceDto(
                     order=place.order,
                     place_type=place.place_type,
-                    id=place.id,
                     name=place.name,
                     category=place.category,
                     road_address=place.road_address,
                     address=place.address,
-                    mapx=place.mapx,
-                    mapy=place.mapy,
+                    latitude=place.latitude,
+                    longitude=place.longitude,
                     link=place.link,
                     telephone=place.telephone,
-                    keyword=place.keyword,
+                    activity_type=place.activity_type,
                     image_url=place.image_url,
-                    start_time=current_time,
-                    end_time=place_end,
-                    duration_minutes=duration,
+                    start_time=start_time,
+                    end_time=end_time,
+                    duration_minutes=place.duration_minutes,
                     move_time_to_next_minutes=move_to_next,
-                    short_description=_SHORT_DESCRIPTIONS.get(place.place_type, "특별한 장소에서 시간을 보내세요."),
+                    short_description=_SHORT_DESCRIPTIONS.get(
+                        place.place_type, "특별한 장소에서 시간을 보내세요."
+                    ),
                 )
             )
-            if not is_last:
-                current_time = _add_minutes(place_end, move_minutes)
 
         return result
 

@@ -9,10 +9,9 @@ from app.domains.recommendation.service.map_client_interface import (
     RouteRequest,
 )
 
-_WALKING_URL = "https://naveropenapi.apigw.ntruss.com/map-direction/v1/walking"
-_DRIVING_URL = "https://naveropenapi.apigw.ntruss.com/map-direction/v1/driving"
+_DRIVING_URL = "https://apis-navi.kakaomobility.com/v1/directions"
 _TIMEOUT_SECONDS = 5.0
-_MS_PER_MINUTE = 60_000
+_SEC_PER_MINUTE = 60
 
 _FALLBACK_MINUTES = {
     Transport.WALK: 15,
@@ -36,10 +35,9 @@ def _parse_wgs84(mapx: str, mapy: str) -> Optional[Tuple[float, float]]:
         return None
 
 
-class NaverMapClient(MapClientInterface):
-    def __init__(self, client_id: str, client_secret: str) -> None:
-        self._client_id = client_id
-        self._client_secret = client_secret
+class KakaoMapClient(MapClientInterface):
+    def __init__(self, rest_api_key: str) -> None:
+        self._rest_api_key = rest_api_key
 
     def get_route(self, request: RouteRequest) -> RouteInfo:
         from_coords = _parse_wgs84(request.from_mapx, request.from_mapy)
@@ -49,42 +47,11 @@ class NaverMapClient(MapClientInterface):
             return self._fallback(request)
 
         try:
-            if request.transport == Transport.WALK:
-                return self._fetch_walking(request, from_coords, to_coords)
             if request.transport == Transport.CAR:
                 return self._fetch_driving(request, from_coords, to_coords)
             return self._fallback(request)
         except Exception:
             return self._fallback(request)
-
-    def _fetch_walking(
-        self,
-        request: RouteRequest,
-        from_coords: Tuple[float, float],
-        to_coords: Tuple[float, float],
-    ) -> RouteInfo:
-        response = httpx.get(
-            _WALKING_URL,
-            params={
-                "start": f"{from_coords[0]},{from_coords[1]}",
-                "goal": f"{to_coords[0]},{to_coords[1]}",
-            },
-            headers=self._headers(),
-            timeout=_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-        data = response.json()
-        summary = data["route"]["pedestrian"][0]["summary"]
-        return RouteInfo(
-            from_mapx=request.from_mapx,
-            from_mapy=request.from_mapy,
-            to_mapx=request.to_mapx,
-            to_mapy=request.to_mapy,
-            transport=request.transport,
-            duration_minutes=max(1, round(summary["duration"] / _MS_PER_MINUTE)),
-            distance_meters=summary.get("distance", 0),
-            is_fallback=False,
-        )
 
     def _fetch_driving(
         self,
@@ -95,23 +62,23 @@ class NaverMapClient(MapClientInterface):
         response = httpx.get(
             _DRIVING_URL,
             params={
-                "start": f"{from_coords[0]},{from_coords[1]}",
-                "goal": f"{to_coords[0]},{to_coords[1]}",
-                "option": "trafast",
+                "origin": f"{from_coords[0]},{from_coords[1]}",
+                "destination": f"{to_coords[0]},{to_coords[1]}",
+                "priority": "RECOMMEND",
             },
-            headers=self._headers(),
+            headers={"Authorization": f"KakaoAK {self._rest_api_key}"},
             timeout=_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         data = response.json()
-        summary = data["route"]["trafast"][0]["summary"]
+        summary = data["routes"][0]["summary"]
         return RouteInfo(
             from_mapx=request.from_mapx,
             from_mapy=request.from_mapy,
             to_mapx=request.to_mapx,
             to_mapy=request.to_mapy,
             transport=request.transport,
-            duration_minutes=max(1, round(summary["duration"] / _MS_PER_MINUTE)),
+            duration_minutes=max(1, round(summary["duration"] / _SEC_PER_MINUTE)),
             distance_meters=summary.get("distance", 0),
             is_fallback=False,
         )
@@ -127,9 +94,3 @@ class NaverMapClient(MapClientInterface):
             distance_meters=0,
             is_fallback=True,
         )
-
-    def _headers(self) -> dict:
-        return {
-            "X-NCP-APIGW-API-KEY-ID": self._client_id,
-            "X-NCP-APIGW-API-KEY": self._client_secret,
-        }

@@ -1,8 +1,77 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Dict, List, Optional
 
-from app.domains.recommendation.domain.value_object.activity_type import ActivityKind
+from app.domains.recommendation.domain.value_object.activity_type import ActivityType
 from app.domains.recommendation.domain.value_object.place_type import PlaceType
+
+
+class ActivityKind(Enum):
+    EXHIBITION = "exhibition"
+    WALK = "walk"
+    PARK = "park"
+    SHOPPING = "shopping"
+    POPUP = "popup"
+    WORKSHOP = "workshop"
+    INDOOR_PLAY = "indoor_play"
+    MOVIE = "movie"
+    KARAOKE = "karaoke"
+    BAR = "bar"
+    NIGHT_VIEW = "night_view"
+    SPORTS = "sports"
+    LATE_NIGHT = "late_night"
+    BOOK_CAFE = "book_cafe"
+
+    @property
+    def activity_type(self) -> ActivityType:
+        return _KIND_TO_TYPE[self]
+
+    @property
+    def is_daytime(self) -> bool:
+        return self not in _NIGHTLIFE_KINDS
+
+    @property
+    def is_core(self) -> bool:
+        return self.is_daytime
+
+    @property
+    def duration_minutes(self) -> int:
+        return _KIND_DURATIONS.get(self, 120)
+
+
+_NIGHTLIFE_KINDS = frozenset({
+    ActivityKind.KARAOKE, ActivityKind.BAR, ActivityKind.NIGHT_VIEW, ActivityKind.LATE_NIGHT,
+})
+
+_KIND_TO_TYPE: Dict[ActivityKind, ActivityType] = {
+    ActivityKind.EXHIBITION: ActivityType.EXHIBITION,
+    ActivityKind.WALK: ActivityType.WALK,
+    ActivityKind.PARK: ActivityType.PARK,
+    ActivityKind.SHOPPING: ActivityType.SHOPPING,
+    ActivityKind.POPUP: ActivityType.EXPERIENCE,
+    ActivityKind.WORKSHOP: ActivityType.EXPERIENCE,
+    ActivityKind.INDOOR_PLAY: ActivityType.EXPERIENCE,
+    ActivityKind.MOVIE: ActivityType.MOVIE,
+    ActivityKind.KARAOKE: ActivityType.NIGHTLIFE,
+    ActivityKind.BAR: ActivityType.NIGHTLIFE,
+    ActivityKind.NIGHT_VIEW: ActivityType.NIGHTLIFE,
+    ActivityKind.SPORTS: ActivityType.EXPERIENCE,
+    ActivityKind.LATE_NIGHT: ActivityType.NIGHTLIFE,
+    ActivityKind.BOOK_CAFE: ActivityType.EXPERIENCE,
+}
+
+_KIND_DURATIONS: Dict[ActivityKind, int] = {
+    ActivityKind.MOVIE: 130,
+    ActivityKind.EXHIBITION: 90,
+    ActivityKind.WORKSHOP: 90,
+    ActivityKind.INDOOR_PLAY: 90,
+    ActivityKind.BOOK_CAFE: 60,
+    ActivityKind.KARAOKE: 90,
+    ActivityKind.BAR: 90,
+    ActivityKind.NIGHT_VIEW: 60,
+    ActivityKind.LATE_NIGHT: 60,
+    ActivityKind.SPORTS: 90,
+}
 
 _AREA_ALIASES: Dict[str, List[str]] = {
     "성수": ["성수", "성수동", "성수역"],
@@ -34,7 +103,8 @@ _CAFE_TEMPLATES = [
 
 _ACTIVITY_TEMPLATES: Dict[str, List[str]] = {
     ActivityKind.EXHIBITION.value: ["{area} 전시", "{area} 미술관"],
-    ActivityKind.WALK.value: ["{area} 공원", "{area} 산책로"],
+    ActivityKind.WALK.value: ["{area} 산책로", "{area} 데이트 산책"],
+    ActivityKind.PARK.value: ["{area} 공원"],
     ActivityKind.SHOPPING.value: ["{area} 쇼핑", "{area} 편집샵"],
     ActivityKind.POPUP.value: ["{area} 팝업스토어"],
     ActivityKind.WORKSHOP.value: ["{area} 공방", "{area} 체험"],
@@ -42,9 +112,9 @@ _ACTIVITY_TEMPLATES: Dict[str, List[str]] = {
     ActivityKind.MOVIE.value: ["{area} 영화관"],
     ActivityKind.KARAOKE.value: ["{area} 노래방"],
     ActivityKind.BAR.value: ["{area} 술집", "{area} 와인바"],
-    ActivityKind.NIGHT_VIEW.value: ["{area} 야경", "{area} 야경카페"],
+    ActivityKind.NIGHT_VIEW.value: ["{area} 야경", "{area} 야경카페", "{area} 루프탑"],
     ActivityKind.SPORTS.value: ["{area} 볼링", "{area} 클라이밍", "{area} 당구장"],
-    ActivityKind.LATE_NIGHT.value: ["{area} 심야 데이트"],
+    ActivityKind.LATE_NIGHT.value: ["{area} 포장마차", "{area} 포차"],
     ActivityKind.BOOK_CAFE.value: ["{area} 북카페", "{area} 만화카페"],
 }
 
@@ -101,7 +171,6 @@ class PlaceSearchQueryBuilder:
         if area in _AREA_ALIASES:
             raw_variants = _AREA_ALIASES[area]
         else:
-            # 프론트에서 variant 이름("성수동")으로 들어올 때 canonical key 역방향 조회
             canonical = next(
                 (key for key, vals in _AREA_ALIASES.items() if area in vals),
                 None,
