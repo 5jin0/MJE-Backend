@@ -42,7 +42,7 @@ _CATEGORY_BLACKLIST = frozenset([
     "학교", "도서관", "스터디카페", "학원", "독서실",
     # 유흥
     "룸싸롱", "단란주점", "유흥주점", "헌팅포차",
-    "노래방", "코인노래방",
+    "노래방", "코인노래방", "노래연습장",
     # 마사지
     "마사지", "안마",
     # 공공기관
@@ -279,6 +279,22 @@ class PlaceCandidateCollector:
                 results.append(_to_place(raw, search_query, rank))
 
         return results
+
+
+def _is_place_blacklisted(place: Place) -> bool:
+    if _is_name_blacklisted(place.name):
+        return True
+    category_str = " > ".join(place.keywords)
+    return _is_blacklisted(category_str)
+
+
+def filter_collection(collection: PlaceCandidateCollection) -> PlaceCandidateCollection:
+    return PlaceCandidateCollection(
+        restaurants=[p for p in collection.restaurants if not _is_place_blacklisted(p)],
+        cafes=[p for p in collection.cafes if not _is_place_blacklisted(p)],
+        activities=[p for p in collection.activities if not _is_place_blacklisted(p)],
+        shortage_reasons=collection.shortage_reasons,
+    )
 
 
 def _is_nightlife_type(activity_type: Optional[str]) -> bool:

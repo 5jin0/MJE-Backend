@@ -22,7 +22,7 @@ from app.domains.recommendation.service.geocoding_client_interface import Geocod
 from app.domains.recommendation.service.mapper.recommendation_response_mapper import (
     RecommendationResponseMapper,
 )
-from app.domains.recommendation.service.place_candidate_collector import PlaceCandidateCollector
+from app.domains.recommendation.service.place_candidate_collector import PlaceCandidateCollector, filter_collection
 from app.domains.recommendation.service.search_client_interface import SearchClientInterface
 
 
@@ -69,6 +69,8 @@ class GetRecommendationUseCase:
             collection = await self._collector.collect(dto.area, center_coords)
             if self._candidate_cache:
                 asyncio.create_task(self._candidate_cache.set(dto.area, collection))
+
+        collection = filter_collection(collection)
 
         # Step 4: generate course candidates
         candidates, candidate_shortages = self._candidate_generator.generate(
