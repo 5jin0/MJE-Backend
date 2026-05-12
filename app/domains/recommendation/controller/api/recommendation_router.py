@@ -24,6 +24,7 @@ from app.domains.recommendation.service.usecase.get_recommendation_usecase impor
     GetRecommendationUseCase,
 )
 from app.infrastructure.api.geocoding.kakao_geocoding_client import KakaoGeocodingClient
+from app.infrastructure.api.map.kakao_map_client import KakaoMapClient
 from app.infrastructure.api.search.kakao_search_client import KakaoSearchClient
 from app.infrastructure.cache.redis_candidate_cache import RedisCandidateCache
 from app.infrastructure.cache.redis_client import get_redis
@@ -56,7 +57,8 @@ async def _get_recommendation_usecase(
 def _get_course_detail_usecase(
     repository: RecommendationSessionRepositoryInterface = Depends(_get_session_repository),
 ) -> GetCourseDetailUseCase:
-    return GetCourseDetailUseCase(repository=repository)
+    map_client = KakaoMapClient(rest_api_key=settings.KAKAO_MAP_REST_API_KEY) if settings.KAKAO_MAP_REST_API_KEY else None
+    return GetCourseDetailUseCase(repository=repository, map_client=map_client)
 
 
 @router.post("/recommendations", response_model=GetRecommendationResponseForm)

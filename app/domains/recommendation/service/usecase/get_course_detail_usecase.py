@@ -1,3 +1,4 @@
+import asyncio
 import math
 from typing import Dict, List, Optional
 
@@ -17,7 +18,9 @@ from app.domains.recommendation.service.dto.response.get_course_detail_response_
 from app.domains.recommendation.service.dto.recommendation_session_dto import RecommendationSessionDto
 from app.domains.recommendation.service.dto.response.get_recommendation_response_dto import (
     RecommendationCourseItemDto,
+    RecommendationPlaceDto,
 )
+from app.domains.recommendation.service.map_client_interface import MapClientInterface, RouteRequest
 
 def _travel_minutes(lat1: float, lon1: float, lat2: float, lon2: float, speed_mps: float) -> int:
     R = 6_371_000.0
@@ -42,8 +45,39 @@ def _add_minutes(time_str: str, minutes: int) -> str:
 
 
 class GetCourseDetailUseCase:
-    def __init__(self, repository: RecommendationSessionRepositoryInterface) -> None:
+    def __init__(
+        self,
+        repository: RecommendationSessionRepositoryInterface,
+        map_client: Optional[MapClientInterface] = None,
+    ) -> None:
         self._repository = repository
+        self._map_client = map_client
+
+    async def _get_move_minutes(
+        self,
+        from_place: RecommendationPlaceDto,
+        to_place: RecommendationPlaceDto,
+        transport: Transport,
+    ) -> int:
+        if transport == Transport.CAR and self._map_client:
+            loop = asyncio.get_running_loop()
+            route = await loop.run_in_executor(
+                None,
+                self._map_client.get_route,
+                RouteRequest(
+                    from_mapx=str(from_place.longitude),
+                    from_mapy=str(from_place.latitude),
+                    to_mapx=str(to_place.longitude),
+                    to_mapy=str(to_place.latitude),
+                    transport=transport,
+                ),
+            )
+            return route.duration_minutes
+        return _travel_minutes(
+            from_place.latitude, from_place.longitude,
+            to_place.latitude, to_place.longitude,
+            transport.speed_mps,
+        )
 
     async def execute(self, dto: GetCourseDetailRequestDto) -> GetCourseDetailResponseDto:
         if not dto.course_id:
@@ -58,7 +92,7 @@ class GetCourseDetailUseCase:
             raise NotFoundError(f"course_id '{dto.course_id}' not found")
 
         transport = Transport(session.transport)
-        places = self._build_places(selected, transport)
+        places = await self._build_places(selected, transport)
         total_duration = sum(p.duration_minutes + (p.move_time_to_next_minutes or 0) for p in places)
 
         place_names = [p.name for p in places]
@@ -84,49 +118,43 @@ class GetCourseDetailUseCase:
             other_courses=other_courses,
         )
 
-    def _build_places(
+    async def _build_places(
         self,
         course: RecommendationCourseItemDto,
         transport: Transport,
     ) -> List[CourseDetailPlaceDto]:
-        result = []
-        for i, place in enumerate(course.places):
-            is_last = i == len(course.places) - 1
-            if is_last:
-                move_to_next: Optional[int] = None
-            else:
-                next_place = course.places[i + 1]
-                move_to_next = _travel_minutes(
-                    place.latitude, place.longitude,
-                    next_place.latitude, next_place.longitude,
-                    transport.speed_mps,
-                )
+        places = course.places
+        move_times: List[Optional[int]] = list(
+            await asyncio.gather(*[
+                self._get_move_minutes(places[i], places[i + 1], transport)
+                for i in range(len(places) - 1)
+            ])
+        ) + [None]
 
-            result.append(
-                CourseDetailPlaceDto(
-                    order=place.order,
-                    place_type=place.place_type,
-                    name=place.name,
-                    category=place.category,
-                    road_address=place.road_address,
-                    address=place.address,
-                    latitude=place.latitude,
-                    longitude=place.longitude,
-                    link=place.link,
-                    telephone=place.telephone,
-                    activity_type=place.activity_type,
-                    image_url=place.image_url,
-                    start_time=place.start_time,
-                    end_time=place.end_time,
-                    duration_minutes=place.duration_minutes,
-                    move_time_to_next_minutes=move_to_next,
-                    short_description=_SHORT_DESCRIPTIONS.get(
-                        place.place_type, "특별한 장소에서 시간을 보내세요."
-                    ),
-                )
+        return [
+            CourseDetailPlaceDto(
+                order=place.order,
+                place_type=place.place_type,
+                name=place.name,
+                category=place.category,
+                road_address=place.road_address,
+                address=place.address,
+                latitude=place.latitude,
+                longitude=place.longitude,
+                link=place.link,
+                telephone=place.telephone,
+                activity_type=place.activity_type,
+                image_url=place.image_url,
+                start_time=place.start_time,
+                end_time=place.end_time,
+                duration_minutes=place.duration_minutes,
+                move_time_to_next_minutes=move_times[i],
+                short_description=_SHORT_DESCRIPTIONS.get(
+                    place.place_type, "특별한 장소에서 시간을 보내세요."
+                ),
             )
-
-        return result
+            for i, place in enumerate(places)
+        ]
 
     def _to_other_course_dto(
         self,

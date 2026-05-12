@@ -14,6 +14,8 @@ from app.domains.recommendation.repository.redis_recommendation_session_reposito
 from app.domains.recommendation.repository.recommendation_session_repository_interface import (
     RecommendationSessionRepositoryInterface,
 )
+from app.infrastructure.api.map.kakao_map_client import KakaoMapClient
+from app.infrastructure.config.config import settings
 from app.domains.recommendation.service.dto.request.get_course_detail_request_dto import (
     GetCourseDetailRequestDto,
 )
@@ -31,7 +33,8 @@ async def _get_session_repository(
 def _get_course_detail_usecase(
     repository: RecommendationSessionRepositoryInterface = Depends(_get_session_repository),
 ) -> GetCourseDetailUseCase:
-    return GetCourseDetailUseCase(repository=repository)
+    map_client = KakaoMapClient(rest_api_key=settings.KAKAO_MAP_REST_API_KEY) if settings.KAKAO_MAP_REST_API_KEY else None
+    return GetCourseDetailUseCase(repository=repository, map_client=map_client)
 
 
 @router.get("/courses/{course_id}", response_model=FrontendCourseDetailResponseForm)
