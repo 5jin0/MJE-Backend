@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from app.domains.recommendation.domain.entity.course_candidate import CourseCandidate, CoursePlace
 from app.domains.recommendation.domain.value_object.activity_type import ActivityType
@@ -91,9 +91,16 @@ class DurationCalculatorService:
     def total_duration(self, course_places: List[CoursePlace]) -> int:
         return sum(cp.duration_minutes + cp.move_minutes_to_next for cp in course_places)
 
-    def is_valid(self, course_places: List[CoursePlace]) -> bool:
+    def is_valid(self, course_places: List[CoursePlace], transport: Optional[Transport] = None) -> bool:
         total = self.total_duration(course_places)
-        return _ALLOW_MIN <= total <= _ALLOW_MAX
+        if not (_ALLOW_MIN <= total <= _ALLOW_MAX):
+            return False
+        if transport is not None:
+            return all(
+                cp.move_minutes_to_next <= transport.max_move_minutes
+                for cp in course_places
+            )
+        return True
 
     def duration_score(self, course_places: List[CoursePlace]) -> float:
         return _duration_score(self.total_duration(course_places))

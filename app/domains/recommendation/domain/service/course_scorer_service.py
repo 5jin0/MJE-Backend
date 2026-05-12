@@ -37,7 +37,7 @@ class CourseScorerService:
     ) -> Course:
         course_places = self._duration_service.schedule(candidate, start_time, transport)
         total_score = self._compute_score(course_places, time_slot, transport)
-        is_valid = self._duration_service.is_valid(course_places)
+        is_valid = self._duration_service.is_valid(course_places, transport)
 
         return Course(
             places=course_places,

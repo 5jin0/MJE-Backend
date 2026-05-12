@@ -26,6 +26,14 @@ class Transport(Enum):
     def needs_parking(self) -> bool:
         return self == Transport.CAR
 
+    @property
+    def max_move_minutes(self) -> int:
+        return {
+            Transport.WALK: 20,
+            Transport.PUBLIC_TRANSIT: 30,
+            Transport.CAR: 60,
+        }[self]
+
     # 기존 코드 호환
     @property
     def base_move_minutes(self) -> int:
