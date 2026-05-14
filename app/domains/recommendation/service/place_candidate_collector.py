@@ -8,6 +8,10 @@ from typing import List, Optional, Set, Tuple
 
 from app.domains.recommendation.domain.value_object.place import Place
 from app.domains.recommendation.domain.value_object.place_type import PlaceType
+from app.domains.recommendation.service.curated_place_pool import (
+    CURATED_SCORE,
+    get_curated_configs,
+)
 from app.domains.recommendation.service.place_search_query_builder import (
     ActivityKind,
     PlaceSearchQuery,
@@ -232,6 +236,27 @@ class PlaceCandidateCollector:
                 cafes.append(extra)
                 existing_cafe_keys.add(extra.place_key)
 
+        curated = await loop.run_in_executor(
+            _SEARCH_EXECUTOR,
+            self._collect_curated_places,
+            area,
+        )
+
+        existing_restaurant_keys = {p.place_key for p in restaurants}
+        for p in curated.restaurants:
+            if p.place_key not in existing_restaurant_keys:
+                restaurants.append(p)
+
+        for p in curated.cafes:
+            if p.place_key not in existing_cafe_keys:
+                cafes.append(p)
+                existing_cafe_keys.add(p.place_key)
+
+        existing_activity_keys = {p.place_key for p in activities}
+        for p in curated.activities:
+            if p.place_key not in existing_activity_keys:
+                activities.append(p)
+
         if center_coords:
             restaurants = _filter_by_radius(restaurants, center_coords, _FILTER_RADIUS_KM)
             cafes = _filter_by_radius(cafes, center_coords, _FILTER_RADIUS_KM)
@@ -261,6 +286,77 @@ class PlaceCandidateCollector:
             cafes=cafes,
             activities=activities,
             shortage_reasons=shortage_reasons,
+        )
+
+    def _collect_curated_places(self, area: str) -> "PlaceCandidateCollection":
+        configs = get_curated_configs(area)
+        restaurants: List[Place] = []
+        cafes: List[Place] = []
+        activities: List[Place] = []
+        seen: set = set()
+
+        for config in configs:
+            try:
+                raw_items = self._client.search_places(config.search_query, 1)
+            except Exception as e:
+                _logger.error("[Curated] error: query=%r error=%r", config.search_query, str(e))
+                continue
+
+            if not raw_items:
+                _logger.warning("[Curated] no result: query=%r", config.search_query)
+                continue
+
+            raw = raw_items[0]
+            if not (raw.road_address or raw.address):
+                continue
+
+            place_key = f"{raw.title}|{raw.road_address or raw.address}"
+            if place_key in seen:
+                continue
+            seen.add(place_key)
+
+            try:
+                lat = float(raw.mapy) if raw.mapy else 0.0
+                lon = float(raw.mapx) if raw.mapx else 0.0
+            except (ValueError, TypeError):
+                lat, lon = 0.0, 0.0
+
+            road_addr = raw.road_address or ""
+            addr = raw.address or ""
+            tokens = (road_addr or addr).split()
+            area_token = tokens[1] if len(tokens) > 1 else (tokens[0] if tokens else "")
+            keywords = [k.strip() for k in raw.category.split(">") if k.strip()]
+            activity_type = config.activity_kind.activity_type.value if config.activity_kind else None
+
+            place = Place(
+                name=raw.title,
+                area=area_token,
+                category=config.place_type.value,
+                address=addr,
+                road_address=road_addr,
+                latitude=lat,
+                longitude=lon,
+                search_rank=1,
+                keywords=keywords,
+                activity_type=activity_type,
+                score=CURATED_SCORE,
+                place_key=place_key,
+                link=raw.link,
+                telephone=raw.telephone,
+            )
+
+            if config.place_type == PlaceType.RESTAURANT:
+                restaurants.append(place)
+            elif config.place_type == PlaceType.CAFE:
+                cafes.append(place)
+            else:
+                activities.append(place)
+
+        return PlaceCandidateCollection(
+            restaurants=restaurants,
+            cafes=cafes,
+            activities=activities,
+            shortage_reasons=[],
         )
 
     def _collect_by_queries(
