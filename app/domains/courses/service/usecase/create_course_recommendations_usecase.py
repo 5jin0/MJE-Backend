@@ -44,7 +44,7 @@ class CreateCourseRecommendationsUseCase:
     def __init__(self, repository: CourseRepositoryInterface) -> None:
         self._repository = repository
 
-    def execute(self, dto: CreateRecommendationRequestDto) -> CreateRecommendationResponseDto:
+    async def execute(self, dto: CreateRecommendationRequestDto) -> CreateRecommendationResponseDto:
         collected_at = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         transport_label = _TRANSPORT_LABELS.get(dto.transport, dto.transport)
         courses = []
@@ -81,7 +81,7 @@ class CreateCourseRecommendationsUseCase:
                 places=places,
             )
 
-            self._repository.save(entity)
+            await self._repository.save(entity)
 
             courses.append(
                 CourseRecommendationItemDto(

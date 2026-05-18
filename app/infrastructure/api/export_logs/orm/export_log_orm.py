@@ -14,4 +14,6 @@ class ExportLogOrm(Base):
     session_id = Column(String(255), nullable=False)
     timestamp = Column(String(50), nullable=False)
     page_path = Column(String(500), nullable=False)
+    course_id = Column(String(255), nullable=True)
+    course_title = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, server_default=func.now(), nullable=False)

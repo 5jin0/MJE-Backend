@@ -1,12 +1,13 @@
 from enum import Enum
+from typing import Optional
 
 from pydantic import BaseModel, field_validator
 
 
 class ExportLogEventType(str, Enum):
-    COURSE_EXPORT = "course_export"
-    COURSE_SEND = "course_send"
-    EXPORT_CLOSE = "export_close"
+    COURSE_SHARE = "course_share"
+    COPY_LINK = "copy_link"
+    SHARE_CLOSE = "share_close"
 
     @classmethod
     def allowed_values(cls) -> list[str]:
@@ -18,6 +19,8 @@ class ExportLogRequestForm(BaseModel):
     session_id: str
     timestamp: str
     page_path: str
+    course_id: Optional[str] = None
+    course_title: Optional[str] = None
 
     @field_validator("event_name")
     @classmethod

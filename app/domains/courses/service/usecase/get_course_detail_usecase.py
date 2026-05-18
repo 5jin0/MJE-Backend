@@ -10,8 +10,8 @@ class GetCourseDetailUseCase:
     def __init__(self, repository: CourseRepositoryInterface) -> None:
         self._repository = repository
 
-    def execute(self, course_id: str) -> GetCourseDetailResponseDto:
-        entity = self._repository.find_by_id(course_id)
+    async def execute(self, course_id: str) -> GetCourseDetailResponseDto:
+        entity = await self._repository.find_by_id(course_id)
         if entity is None:
             raise NotFoundError(f"코스를 찾을 수 없습니다: {course_id}")
 

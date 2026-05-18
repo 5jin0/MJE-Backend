@@ -19,6 +19,8 @@ async def record_export_log(
         session_id=form.session_id,
         timestamp=form.timestamp,
         page_path=form.page_path,
+        course_id=form.course_id,
+        course_title=form.course_title,
     )
     db.add(log)
     await db.flush()

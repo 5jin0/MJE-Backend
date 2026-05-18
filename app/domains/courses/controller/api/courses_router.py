@@ -16,8 +16,7 @@ from app.domains.courses.controller.api.response_form.create_recommendation_resp
 from app.domains.courses.controller.api.response_form.get_course_detail_response_form import (
     GetCourseDetailResponseForm,
 )
-from app.domains.courses.repository.course_repository_interface import CourseRepositoryInterface
-from app.domains.courses.repository.in_memory_course_repository import get_course_repository
+from app.domains.courses.repository.mysql_course_repository import MysqlCourseRepository
 from app.domains.courses.repository.mysql_courses_event_repository import MysqlCoursesEventRepository
 from app.domains.courses.service.usecase.create_course_recommendations_usecase import (
     CreateCourseRecommendationsUseCase,
@@ -30,15 +29,15 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 
 
 def _get_create_recommendations_usecase(
-    repository: CourseRepositoryInterface = Depends(get_course_repository),
+    db: AsyncSession = Depends(get_db),
 ) -> CreateCourseRecommendationsUseCase:
-    return CreateCourseRecommendationsUseCase(repository)
+    return CreateCourseRecommendationsUseCase(MysqlCourseRepository(db))
 
 
 def _get_course_detail_usecase(
-    repository: CourseRepositoryInterface = Depends(get_course_repository),
+    db: AsyncSession = Depends(get_db),
 ) -> GetCourseDetailUseCase:
-    return GetCourseDetailUseCase(repository)
+    return GetCourseDetailUseCase(MysqlCourseRepository(db))
 
 
 @router.post("/events", response_model=CourseEventResponseForm, status_code=200)
@@ -53,19 +52,19 @@ async def record_course_event(
 
 
 @router.post("/recommendations", response_model=CreateRecommendationResponseForm)
-def create_recommendations(
+async def create_recommendations(
     form: CreateRecommendationRequestForm,
     usecase: CreateCourseRecommendationsUseCase = Depends(_get_create_recommendations_usecase),
 ) -> CreateRecommendationResponseForm:
     dto = form.to_request()
-    result = usecase.execute(dto)
+    result = await usecase.execute(dto)
     return CreateRecommendationResponseForm.from_response(result)
 
 
 @router.get("/{course_id}", response_model=GetCourseDetailResponseForm)
-def get_course_detail(
+async def get_course_detail(
     course_id: str,
     usecase: GetCourseDetailUseCase = Depends(_get_course_detail_usecase),
 ) -> GetCourseDetailResponseForm:
-    result = usecase.execute(course_id)
+    result = await usecase.execute(course_id)
     return GetCourseDetailResponseForm.from_response(result)
