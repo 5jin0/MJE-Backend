@@ -1,6 +1,10 @@
 import asyncio
-from typing import Optional, Tuple
+import math
+from typing import List, Optional, Tuple
 
+from app.domains.courses.domain.entity.course_entity import CourseEntity, CoursePlace
+from app.domains.courses.domain.value_object.recommendation_place import RecommendationPlace
+from app.domains.courses.repository.course_repository_interface import CourseRepositoryInterface
 from app.domains.recommendation.domain.service.course_candidate_generator_service import (
     CourseCandidateGeneratorService,
 )
@@ -17,6 +21,7 @@ from app.domains.recommendation.service.dto.request.get_recommendation_request_d
 )
 from app.domains.recommendation.service.dto.response.get_recommendation_response_dto import (
     GetRecommendationResponseDto,
+    RecommendationCourseItemDto,
 )
 from app.domains.recommendation.service.geocoding_client_interface import GeocodingClientInterface
 from app.domains.recommendation.service.mapper.recommendation_response_mapper import (
@@ -26,6 +31,70 @@ from app.domains.recommendation.service.place_candidate_collector import PlaceCa
 from app.domains.recommendation.service.search_client_interface import SearchClientInterface
 
 
+def _haversine_minutes(lat1: float, lon1: float, lat2: float, lon2: float, speed_mps: float) -> int:
+    R = 6_371_000.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    dist = R * 2 * math.asin(math.sqrt(a))
+    return max(1, round(dist / speed_mps / 60))
+
+
+def _to_course_entity(course_item: RecommendationCourseItemDto, area: str, start_time: str, transport_str: str) -> CourseEntity:
+    transport = Transport(transport_str)
+    places_dto = course_item.places
+
+    course_places: List[CoursePlace] = []
+    for i, p in enumerate(places_dto):
+        move_time = 0
+        if i < len(places_dto) - 1:
+            nxt = places_dto[i + 1]
+            move_time = _haversine_minutes(p.latitude, p.longitude, nxt.latitude, nxt.longitude, transport.speed_mps)
+        course_places.append(CoursePlace(
+            order=p.order,
+            place_type=p.place_type,
+            id=0,
+            name=p.name,
+            category=p.category,
+            road_address=p.road_address,
+            address=p.address,
+            mapx=str(p.longitude),
+            mapy=str(p.latitude),
+            link=p.link,
+            telephone=p.telephone,
+            keyword="",
+            collected_at="",
+            start_time=p.start_time,
+            end_time=p.end_time,
+            duration_minutes=p.duration_minutes,
+            move_time_to_next_minutes=move_time,
+        ))
+
+    def _find_place(place_type: str) -> RecommendationPlace:
+        p = next((p for p in places_dto if p.place_type == place_type), None)
+        if p is None:
+            return RecommendationPlace(id=0, name="", category="", road_address="", address="", mapx="", mapy="", link="", telephone="", keyword="", collected_at="")
+        return RecommendationPlace(id=0, name=p.name, category=p.category, road_address=p.road_address, address=p.address, mapx=str(p.longitude), mapy=str(p.latitude), link=p.link, telephone=p.telephone, keyword="", collected_at="")
+
+    total_duration = sum(cp.duration_minutes + cp.move_time_to_next_minutes for cp in course_places)
+    place_names = ", ".join(p.name for p in places_dto)
+
+    return CourseEntity(
+        course_id=course_item.course_id,
+        grade=course_item.grade,
+        area=area,
+        start_time=start_time,
+        transport=transport_str,
+        title=f"{area}에서 즐기는 데이트 코스",
+        description=f"{area}에서 {place_names}을(를) 즐기는 하루 코스입니다.",
+        estimated_duration_minutes=total_duration,
+        restaurant=_find_place("restaurant"),
+        cafe=_find_place("cafe"),
+        activity=_find_place("activity"),
+        places=course_places,
+    )
+
+
 class GetRecommendationUseCase:
     def __init__(
         self,
@@ -33,6 +102,7 @@ class GetRecommendationUseCase:
         search_client: SearchClientInterface,
         candidate_cache: Optional[CandidateCacheInterface] = None,
         geocoding_client: Optional[GeocodingClientInterface] = None,
+        course_repository: Optional[CourseRepositoryInterface] = None,
     ) -> None:
         self._session_repository = session_repository
         self._collector = PlaceCandidateCollector(search_client)
@@ -41,6 +111,7 @@ class GetRecommendationUseCase:
         self._mapper = RecommendationResponseMapper()
         self._candidate_cache = candidate_cache
         self._geocoding_client = geocoding_client
+        self._course_repository = course_repository
 
     async def _geocode(self, area: str) -> Optional[Tuple[float, float]]:
         if not self._geocoding_client:
@@ -114,5 +185,9 @@ class GetRecommendationUseCase:
                     )
                 )
             )
+            if self._course_repository:
+                for course_item in response.courses:
+                    entity = _to_course_entity(course_item, dto.area, dto.start_time, dto.transport)
+                    await self._course_repository.save(entity)
 
         return response
