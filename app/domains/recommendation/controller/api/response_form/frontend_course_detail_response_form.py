@@ -150,6 +150,7 @@ class FrontendRestaurantsListForm(BaseModel):
 
 class FrontendOtherCourseItemForm(BaseModel):
     courseId: str
+    courseType: str
     name: str
     locations: List[str]
     duration: Optional[int] = None
@@ -165,11 +166,13 @@ class FrontendOtherCoursesListForm(BaseModel):
             courses=[
                 FrontendOtherCourseItemForm(
                     courseId=o.course_id,
+                    courseType=o.grade,
                     name=o.title,
                     locations=[o.area],
                     duration=o.estimated_duration_minutes,
                     description=o.route_summary,
                 )
                 for o in dto.other_courses
+                if o.course_id != dto.course_id
             ]
         )
