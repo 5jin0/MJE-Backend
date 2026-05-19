@@ -1,5 +1,11 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.exceptions import NotFoundError
+from app.domains.courses.repository.mysql_course_repository import MysqlCourseRepository
+from app.domains.recommendation.service.mapper.course_detail_mysql_mapper import (
+    build_course_detail_from_entity,
+)
 from app.domains.recommendation.controller.api.request_form.get_recommendation_request_form import (
     GetRecommendationRequestForm,
 )
@@ -16,19 +22,15 @@ from app.domains.recommendation.repository.redis_recommendation_session_reposito
 from app.domains.recommendation.repository.recommendation_session_repository_interface import (
     RecommendationSessionRepositoryInterface,
 )
-from app.domains.recommendation.service.dto.request.get_course_detail_request_dto import (
-    GetCourseDetailRequestDto,
-)
-from app.domains.recommendation.service.usecase.get_course_detail_usecase import GetCourseDetailUseCase
 from app.domains.recommendation.service.usecase.get_recommendation_usecase import (
     GetRecommendationUseCase,
 )
 from app.infrastructure.api.geocoding.kakao_geocoding_client import KakaoGeocodingClient
-from app.infrastructure.api.map.kakao_map_client import KakaoMapClient
 from app.infrastructure.api.search.kakao_search_client import KakaoSearchClient
 from app.infrastructure.cache.redis_candidate_cache import RedisCandidateCache
 from app.infrastructure.cache.redis_client import get_redis
 from app.infrastructure.config.config import settings
+from app.infrastructure.database.database import get_db
 
 router = APIRouter(prefix="/courses", tags=["recommendation"])
 
@@ -41,6 +43,7 @@ async def _get_session_repository(
 
 async def _get_recommendation_usecase(
     repository: RecommendationSessionRepositoryInterface = Depends(_get_session_repository),
+    db: AsyncSession = Depends(get_db),
 ) -> GetRecommendationUseCase:
     search_client = KakaoSearchClient(rest_api_key=settings.KAKAO_MAP_REST_API_KEY)
     redis_client = await get_redis()
@@ -51,14 +54,8 @@ async def _get_recommendation_usecase(
         search_client=search_client,
         candidate_cache=candidate_cache,
         geocoding_client=geocoding_client,
+        course_repository=MysqlCourseRepository(db),
     )
-
-
-def _get_course_detail_usecase(
-    repository: RecommendationSessionRepositoryInterface = Depends(_get_session_repository),
-) -> GetCourseDetailUseCase:
-    map_client = KakaoMapClient(rest_api_key=settings.KAKAO_MAP_REST_API_KEY) if settings.KAKAO_MAP_REST_API_KEY else None
-    return GetCourseDetailUseCase(repository=repository, map_client=map_client)
 
 
 @router.post("/recommendations", response_model=GetRecommendationResponseForm)
@@ -74,8 +71,10 @@ async def get_recommendations(
 @router.get("/recommendations/{course_id}", response_model=FrontendCourseDetailResponseForm)
 async def get_course_detail(
     course_id: str,
-    usecase: GetCourseDetailUseCase = Depends(_get_course_detail_usecase),
+    db: AsyncSession = Depends(get_db),
 ) -> FrontendCourseDetailResponseForm:
-    dto = GetCourseDetailRequestDto(course_id=course_id)
-    result = await usecase.execute(dto)
+    entity = await MysqlCourseRepository(db).find_by_id(course_id)
+    if entity is None:
+        raise NotFoundError(f"코스를 찾을 수 없습니다: {course_id}")
+    result = build_course_detail_from_entity(course_id, entity)
     return FrontendCourseDetailResponseForm.from_dto(result)
