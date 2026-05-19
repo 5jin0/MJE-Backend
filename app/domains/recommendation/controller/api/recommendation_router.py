@@ -15,13 +15,6 @@ from app.domains.recommendation.controller.api.response_form.frontend_course_det
 from app.domains.recommendation.controller.api.response_form.get_recommendation_response_form import (
     GetRecommendationResponseForm,
 )
-from app.domains.recommendation.repository.redis_recommendation_session_repository import (
-    RedisRecommendationSessionRepository,
-    get_recommendation_session_repository,
-)
-from app.domains.recommendation.repository.recommendation_session_repository_interface import (
-    RecommendationSessionRepositoryInterface,
-)
 from app.domains.recommendation.service.usecase.get_recommendation_usecase import (
     GetRecommendationUseCase,
 )
@@ -35,14 +28,7 @@ from app.infrastructure.database.database import get_db
 router = APIRouter(prefix="/courses", tags=["recommendation"])
 
 
-async def _get_session_repository(
-    repository: RedisRecommendationSessionRepository = Depends(get_recommendation_session_repository),
-) -> RecommendationSessionRepositoryInterface:
-    return repository
-
-
 async def _get_recommendation_usecase(
-    repository: RecommendationSessionRepositoryInterface = Depends(_get_session_repository),
     db: AsyncSession = Depends(get_db),
 ) -> GetRecommendationUseCase:
     search_client = KakaoSearchClient(rest_api_key=settings.KAKAO_MAP_REST_API_KEY)
@@ -50,7 +36,6 @@ async def _get_recommendation_usecase(
     candidate_cache = RedisCandidateCache(redis_client)
     geocoding_client = KakaoGeocodingClient(rest_api_key=settings.KAKAO_MAP_REST_API_KEY)
     return GetRecommendationUseCase(
-        session_repository=repository,
         search_client=search_client,
         candidate_cache=candidate_cache,
         geocoding_client=geocoding_client,

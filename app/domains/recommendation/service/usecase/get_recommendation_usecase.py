@@ -12,11 +12,7 @@ from app.domains.recommendation.domain.service.course_candidate_generator_servic
 from app.domains.recommendation.domain.service.course_selector_service import CourseSelectorService
 from app.domains.recommendation.domain.value_object.time_slot import TimeSlot
 from app.domains.recommendation.domain.value_object.transport import Transport
-from app.domains.recommendation.repository.recommendation_session_repository_interface import (
-    RecommendationSessionRepositoryInterface,
-)
 from app.domains.recommendation.service.candidate_cache_interface import CandidateCacheInterface
-from app.domains.recommendation.service.dto.recommendation_session_dto import RecommendationSessionDto
 from app.domains.recommendation.service.dto.request.get_recommendation_request_dto import (
     GetRecommendationRequestDto,
 )
@@ -100,13 +96,11 @@ def _to_course_entity(course_item: RecommendationCourseItemDto, area: str, start
 class GetRecommendationUseCase:
     def __init__(
         self,
-        session_repository: RecommendationSessionRepositoryInterface,
         search_client: SearchClientInterface,
         candidate_cache: Optional[CandidateCacheInterface] = None,
         geocoding_client: Optional[GeocodingClientInterface] = None,
         course_repository: Optional[CourseRepositoryInterface] = None,
     ) -> None:
-        self._session_repository = session_repository
         self._collector = PlaceCandidateCollector(search_client)
         self._candidate_generator = CourseCandidateGeneratorService()
         self._selector = CourseSelectorService()
@@ -177,16 +171,6 @@ class GetRecommendationUseCase:
         response = self._mapper.to_response_dto(best, optionals, shortage_reasons)
 
         if response.courses:
-            asyncio.create_task(
-                self._session_repository.save(
-                    RecommendationSessionDto(
-                        area=dto.area,
-                        start_time=dto.start_time,
-                        transport=dto.transport,
-                        courses=response.courses,
-                    )
-                )
-            )
             if self._course_repository:
                 try:
                     session_id = str(uuid.uuid4())
