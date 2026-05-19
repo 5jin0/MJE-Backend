@@ -219,14 +219,20 @@ class PlaceCandidateCollector:
                 )
                 for kind in all_kinds
             ],
+            loop.run_in_executor(
+                _SEARCH_EXECUTOR,
+                self._collect_curated_places,
+                area,
+            ),
         )
 
         restaurants: List[Place] = results[0]
         cafes: List[Place] = results[1]
+        curated: PlaceCandidateCollection = results[-1]
 
         activities: List[Place] = []
         cafe_extras: List[Place] = []
-        for places in results[2:]:
+        for places in results[2:-1]:
             for place in places:
                 if _is_cafe_like_nonnightlife(place):
                     cafe_extras.append(
@@ -240,12 +246,6 @@ class PlaceCandidateCollector:
             if extra.place_key not in existing_cafe_keys:
                 cafes.append(extra)
                 existing_cafe_keys.add(extra.place_key)
-
-        curated = await loop.run_in_executor(
-            _SEARCH_EXECUTOR,
-            self._collect_curated_places,
-            area,
-        )
 
         existing_restaurant_keys = {p.place_key for p in restaurants}
         for p in curated.restaurants:
@@ -300,43 +300,49 @@ class PlaceCandidateCollector:
         activities: List[Place] = []
         seen: set = set()
 
-        for config in configs:
+        coord_configs = [c for c in configs if c.latitude is not None]
+        api_configs = [c for c in configs if c.latitude is None]
+
+        for config in coord_configs:
             activity_type = config.activity_kind.activity_type.value if config.activity_kind else None
-
-            if config.latitude is not None and config.longitude is not None:
-                place_key = f"{config.search_query}|coords:{config.latitude},{config.longitude}"
-                if place_key in seen:
-                    continue
-                seen.add(place_key)
-                place = Place(
-                    name=config.search_query,
-                    area=area,
-                    category=config.place_type.value,
-                    address="",
-                    road_address="",
-                    latitude=config.latitude,
-                    longitude=config.longitude,
-                    search_rank=1,
-                    keywords=[],
-                    activity_type=activity_type,
-                    score=CURATED_SCORE,
-                    place_key=place_key,
-                    link="",
-                    telephone="",
-                )
+            place_key = f"{config.search_query}|coords:{config.latitude},{config.longitude}"
+            if place_key in seen:
+                continue
+            seen.add(place_key)
+            place = Place(
+                name=config.search_query,
+                area=area,
+                category=config.place_type.value,
+                address="",
+                road_address="",
+                latitude=config.latitude,
+                longitude=config.longitude,
+                search_rank=1,
+                keywords=[],
+                activity_type=activity_type,
+                score=CURATED_SCORE,
+                place_key=place_key,
+                link="",
+                telephone="",
+            )
+            if config.place_type == PlaceType.RESTAURANT:
+                restaurants.append(place)
+            elif config.place_type == PlaceType.CAFE:
+                cafes.append(place)
             else:
-                try:
-                    raw_items = self._client.search_places(config.search_query, 1)
-                except Exception as e:
-                    _logger.error("[Curated] error: query=%r error=%r", config.search_query, str(e))
-                    continue
+                activities.append(place)
 
-                if not raw_items:
-                    _logger.warning("[Curated] no result: query=%r", config.search_query)
-                    continue
+        def _fetch_one(config):
+            try:
+                raw_items = self._client.search_places(config.search_query, 1)
+                return config, raw_items[0] if raw_items else None
+            except Exception as e:
+                _logger.error("[Curated] error: query=%r error=%r", config.search_query, str(e))
+                return config, None
 
-                raw = raw_items[0]
-                if not (raw.road_address or raw.address):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            for config, raw in executor.map(_fetch_one, api_configs):
+                if raw is None or not (raw.road_address or raw.address):
                     continue
 
                 place_key = f"{raw.title}|{raw.road_address or raw.address}"
@@ -344,6 +350,7 @@ class PlaceCandidateCollector:
                     continue
                 seen.add(place_key)
 
+                activity_type = config.activity_kind.activity_type.value if config.activity_kind else None
                 try:
                     lat = float(raw.mapy) if raw.mapy else 0.0
                     lon = float(raw.mapx) if raw.mapx else 0.0
@@ -373,12 +380,12 @@ class PlaceCandidateCollector:
                     telephone=raw.telephone,
                 )
 
-            if config.place_type == PlaceType.RESTAURANT:
-                restaurants.append(place)
-            elif config.place_type == PlaceType.CAFE:
-                cafes.append(place)
-            else:
-                activities.append(place)
+                if config.place_type == PlaceType.RESTAURANT:
+                    restaurants.append(place)
+                elif config.place_type == PlaceType.CAFE:
+                    cafes.append(place)
+                else:
+                    activities.append(place)
 
         return PlaceCandidateCollection(
             restaurants=restaurants,
