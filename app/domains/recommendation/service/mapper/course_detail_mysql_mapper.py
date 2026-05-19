@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 
 from app.domains.courses.domain.entity.course_entity import CourseEntity
 from app.domains.recommendation.service.dto.response.get_course_detail_response_dto import (
@@ -6,6 +6,12 @@ from app.domains.recommendation.service.dto.response.get_course_detail_response_
     GetCourseDetailResponseDto,
     OtherCourseDto,
 )
+
+_SHORT_DESCRIPTIONS: Dict[str, str] = {
+    "restaurant": "맛있는 식사로 데이트를 풍성하게 즐기세요.",
+    "cafe": "분위기 좋은 카페에서 여유로운 시간을 보내세요.",
+    "activity": "특별한 활동으로 잊지 못할 추억을 만들어보세요.",
+}
 
 
 def build_course_detail_from_entity(
@@ -31,7 +37,7 @@ def build_course_detail_from_entity(
             end_time=p.end_time,
             duration_minutes=p.duration_minutes,
             move_time_to_next_minutes=p.move_time_to_next_minutes,
-            short_description="",
+            short_description=_SHORT_DESCRIPTIONS.get(p.place_type, "특별한 장소에서 시간을 보내세요."),
         )
         for p in sorted(entity.places, key=lambda x: x.order)
     ]
