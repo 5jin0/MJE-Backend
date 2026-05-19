@@ -6,6 +6,7 @@ from app.domains.courses.repository.orm.course_orm import CourseOrm, CoursePlace
 def to_orm(entity: CourseEntity) -> CourseOrm:
     course_orm = CourseOrm(
         course_id=entity.course_id,
+        session_id=entity.session_id or None,
         grade=entity.grade,
         area=entity.area,
         start_time=entity.start_time,
@@ -27,6 +28,7 @@ def to_entity(orm: CourseOrm) -> CourseEntity:
 
     return CourseEntity(
         course_id=orm.course_id,
+        session_id=orm.session_id or "",
         grade=orm.grade,
         area=orm.area,
         start_time=orm.start_time,

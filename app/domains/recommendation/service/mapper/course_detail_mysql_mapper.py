@@ -1,10 +1,18 @@
+from typing import List
+
+from app.domains.courses.domain.entity.course_entity import CourseEntity
 from app.domains.recommendation.service.dto.response.get_course_detail_response_dto import (
     CourseDetailPlaceDto,
     GetCourseDetailResponseDto,
+    OtherCourseDto,
 )
 
 
-def build_course_detail_from_entity(course_id: str, entity) -> GetCourseDetailResponseDto:
+def build_course_detail_from_entity(
+    course_id: str,
+    entity: CourseEntity,
+    other_entities: List[CourseEntity] = [],
+) -> GetCourseDetailResponseDto:
     places = [
         CourseDetailPlaceDto(
             order=p.order,
@@ -27,6 +35,20 @@ def build_course_detail_from_entity(course_id: str, entity) -> GetCourseDetailRe
         )
         for p in sorted(entity.places, key=lambda x: x.order)
     ]
+
+    other_courses = [
+        OtherCourseDto(
+            course_id=o.course_id,
+            grade=o.grade,
+            title=o.title,
+            route_summary=" > ".join(p.name for p in sorted(o.places, key=lambda x: x.order)),
+            area=o.area,
+            estimated_duration_minutes=o.estimated_duration_minutes,
+        )
+        for o in other_entities
+        if o.course_id != course_id
+    ]
+
     return GetCourseDetailResponseDto(
         course_id=entity.course_id,
         grade=entity.grade,
@@ -37,7 +59,7 @@ def build_course_detail_from_entity(course_id: str, entity) -> GetCourseDetailRe
         description=entity.description,
         estimated_duration_minutes=entity.estimated_duration_minutes,
         places=places,
-        other_courses=[],
+        other_courses=other_courses,
     )
 
 

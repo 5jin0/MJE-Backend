@@ -38,4 +38,5 @@ class CourseEntity:
     restaurant: RecommendationPlace
     cafe: RecommendationPlace
     activity: RecommendationPlace
+    session_id: str = ""
     places: List[CoursePlace] = field(default_factory=list)

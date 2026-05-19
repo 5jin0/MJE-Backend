@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,3 +26,9 @@ class MysqlCourseRepository(CourseRepositoryInterface):
         if orm is None:
             return None
         return to_entity(orm)
+
+    async def find_by_session_id(self, session_id: str) -> List[CourseEntity]:
+        result = await self._session.execute(
+            select(CourseOrm).where(CourseOrm.session_id == session_id)
+        )
+        return [to_entity(orm) for orm in result.scalars().all()]

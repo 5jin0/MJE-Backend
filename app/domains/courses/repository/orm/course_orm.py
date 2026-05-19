@@ -11,6 +11,7 @@ class CourseOrm(Base):
     __tablename__ = "courses"
 
     course_id = Column(String(36), primary_key=True)
+    session_id = Column(String(36), nullable=True, index=True)
     grade = Column(String(50), nullable=False)
     area = Column(String(100), nullable=False)
     start_time = Column(String(10), nullable=False)

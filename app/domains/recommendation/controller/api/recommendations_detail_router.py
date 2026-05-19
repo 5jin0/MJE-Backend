@@ -22,10 +22,12 @@ router = APIRouter(prefix="/recommendations", tags=["recommendation"])
 
 
 async def _get_dto(course_id: str, db: AsyncSession) -> GetCourseDetailResponseDto:
-    entity = await MysqlCourseRepository(db).find_by_id(course_id)
+    repo = MysqlCourseRepository(db)
+    entity = await repo.find_by_id(course_id)
     if entity is None:
         raise NotFoundError(f"코스를 찾을 수 없습니다: {course_id}")
-    return build_course_detail_from_entity(course_id, entity)
+    others = await repo.find_by_session_id(entity.session_id) if entity.session_id else []
+    return build_course_detail_from_entity(course_id, entity, others)
 
 
 @router.get("/courses/{course_id}", response_model=FrontendCourseDetailResponseForm)

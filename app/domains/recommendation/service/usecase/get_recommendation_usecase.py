@@ -1,5 +1,6 @@
 import asyncio
 import math
+import uuid
 from typing import List, Optional, Tuple
 
 from app.domains.courses.domain.entity.course_entity import CourseEntity, CoursePlace
@@ -40,7 +41,7 @@ def _haversine_minutes(lat1: float, lon1: float, lat2: float, lon2: float, speed
     return max(1, round(dist / speed_mps / 60))
 
 
-def _to_course_entity(course_item: RecommendationCourseItemDto, area: str, start_time: str, transport_str: str) -> CourseEntity:
+def _to_course_entity(course_item: RecommendationCourseItemDto, area: str, start_time: str, transport_str: str, session_id: str = "") -> CourseEntity:
     transport = Transport(transport_str)
     places_dto = course_item.places
 
@@ -81,6 +82,7 @@ def _to_course_entity(course_item: RecommendationCourseItemDto, area: str, start
 
     return CourseEntity(
         course_id=course_item.course_id,
+        session_id=session_id,
         grade=course_item.grade,
         area=area,
         start_time=start_time,
@@ -186,8 +188,13 @@ class GetRecommendationUseCase:
                 )
             )
             if self._course_repository:
-                for course_item in response.courses:
-                    entity = _to_course_entity(course_item, dto.area, dto.start_time, dto.transport)
-                    await self._course_repository.save(entity)
+                try:
+                    session_id = str(uuid.uuid4())
+                    for course_item in response.courses:
+                        entity = _to_course_entity(course_item, dto.area, dto.start_time, dto.transport, session_id)
+                        await self._course_repository.save(entity)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).error("[MySQL] course save failed: %r", str(e))
 
         return response

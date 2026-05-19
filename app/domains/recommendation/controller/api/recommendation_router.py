@@ -73,8 +73,10 @@ async def get_course_detail(
     course_id: str,
     db: AsyncSession = Depends(get_db),
 ) -> FrontendCourseDetailResponseForm:
-    entity = await MysqlCourseRepository(db).find_by_id(course_id)
+    repo = MysqlCourseRepository(db)
+    entity = await repo.find_by_id(course_id)
     if entity is None:
         raise NotFoundError(f"코스를 찾을 수 없습니다: {course_id}")
-    result = build_course_detail_from_entity(course_id, entity)
+    others = await repo.find_by_session_id(entity.session_id) if entity.session_id else []
+    result = build_course_detail_from_entity(course_id, entity, others)
     return FrontendCourseDetailResponseForm.from_dto(result)
