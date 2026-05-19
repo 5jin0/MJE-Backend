@@ -21,9 +21,8 @@ class RecommendationResponseMapper:
         if best is not None:
             courses.append(self._to_course_item(best, "best"))
 
-        labels = ["optionA", "optionB"]
-        for i, optional in enumerate(optionals):
-            courses.append(self._to_course_item(optional, labels[i] if i < len(labels) else f"option{chr(65 + i)}"))
+        for optional in optionals:
+            courses.append(self._to_course_item(optional, "optional"))
 
         return GetRecommendationResponseDto(
             courses=courses,
