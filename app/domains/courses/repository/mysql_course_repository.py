@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.courses.domain.entity.course_entity import CourseEntity
@@ -28,7 +28,10 @@ class MysqlCourseRepository(CourseRepositoryInterface):
         return to_entity(orm)
 
     async def find_by_session_id(self, session_id: str) -> List[CourseEntity]:
+        grade_order = case({"best": 0}, value=CourseOrm.grade, else_=1)
         result = await self._session.execute(
-            select(CourseOrm).where(CourseOrm.session_id == session_id)
+            select(CourseOrm)
+            .where(CourseOrm.session_id == session_id)
+            .order_by(grade_order, CourseOrm.course_id)
         )
         return [to_entity(orm) for orm in result.scalars().all()]
