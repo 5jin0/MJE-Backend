@@ -7,6 +7,18 @@ from app.domains.recommendation.service.dto.response.get_course_detail_response_
 )
 
 
+def _build_grade_map(courses: list) -> dict:
+    optional_index = 0
+    grade_map = {}
+    for o in courses:
+        if o.grade == "best":
+            grade_map[o.course_id] = "best"
+        else:
+            grade_map[o.course_id] = "optional_a" if optional_index == 0 else "optional_b"
+            optional_index += 1
+    return grade_map
+
+
 class FrontendPlaceResponseForm(BaseModel):
     visitOrder: int
     name: str
@@ -43,10 +55,11 @@ class FrontendCourseDetailResponseForm(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: GetCourseDetailResponseDto) -> "FrontendCourseDetailResponseForm":
+        grade_map = _build_grade_map(dto.other_courses)
         route_summary = " > ".join(p.name for p in dto.places)
         return cls(
             courseId=dto.course_id,
-            courseType=dto.grade,
+            courseType=grade_map.get(dto.course_id, dto.grade),
             title=dto.title,
             description=dto.description,
             totalDuration=dto.estimated_duration_minutes,
@@ -71,7 +84,7 @@ class FrontendCourseDetailResponseForm(BaseModel):
             subCourses=[
                 FrontendSubCourseResponseForm(
                     courseId=o.course_id,
-                    courseType=o.grade,
+                    courseType=grade_map.get(o.course_id, o.grade),
                     title=o.title,
                     routeSummary=o.route_summary,
                     locationSummary=o.area,
@@ -169,25 +182,18 @@ class FrontendOtherCoursesListForm(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: GetCourseDetailResponseDto) -> "FrontendOtherCoursesListForm":
-        optional_index = 0
-        courses = []
-        for o in dto.other_courses:
-            if o.course_id == dto.course_id:
-                continue
-            if o.grade == "best":
-                course_type = "best"
-            else:
-                course_type = "optional_a" if optional_index == 0 else "optional_b"
-                optional_index += 1
-            courses.append(
-                FrontendOtherCourseItemForm(
-                    courseId=o.course_id,
-                    courseType=course_type,
-                    name=o.title,
-                    places=o.places,
-                    locations=[o.area],
-                    duration=o.estimated_duration_minutes,
-                    description=o.route_summary,
-                )
+        grade_map = _build_grade_map(dto.other_courses)
+        courses = [
+            FrontendOtherCourseItemForm(
+                courseId=o.course_id,
+                courseType=grade_map.get(o.course_id, o.grade),
+                name=o.title,
+                places=o.places,
+                locations=[o.area],
+                duration=o.estimated_duration_minutes,
+                description=o.route_summary,
             )
+            for o in dto.other_courses
+            if o.course_id != dto.course_id
+        ]
         return cls(courses=courses)
