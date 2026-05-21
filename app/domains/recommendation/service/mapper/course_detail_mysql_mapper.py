@@ -53,7 +53,6 @@ def build_course_detail_from_entity(
             places=[p.name for p in sorted(o.places, key=lambda x: x.order)],
         )
         for o in other_entities
-        if o.course_id != course_id
     ]
 
     return GetCourseDetailResponseDto(

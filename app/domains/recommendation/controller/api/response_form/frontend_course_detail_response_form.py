@@ -91,6 +91,7 @@ class FrontendCourseDetailResponseForm(BaseModel):
                     totalDuration=o.estimated_duration_minutes,
                 )
                 for o in dto.other_courses
+                if o.course_id != dto.course_id
             ],
         )
 
