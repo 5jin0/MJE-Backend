@@ -250,6 +250,18 @@ _YEONNAM_PLACES: List[CuratedPlaceConfig] = [
     CuratedPlaceConfig("비트포비아 연남", PlaceType.ACTIVITY, ActivityKind.INDOOR_PLAY, latitude=37.549644, longitude=126.917371),
 ]
 
+_DONGGYO_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("요쇼쿠야코우", PlaceType.RESTAURANT),
+    CuratedPlaceConfig("소바하우스 멘야준", PlaceType.RESTAURANT),
+    # 카페
+    CuratedPlaceConfig("콘하스 연남점", PlaceType.CAFE),
+    CuratedPlaceConfig("하우스오브바이닐", PlaceType.CAFE, latitude=37.560423, longitude=126.924463),
+    CuratedPlaceConfig("오스카 커피부스", PlaceType.CAFE),
+    # Activity - 쇼핑 (SHOPPING) - 음반/레코드샵
+    CuratedPlaceConfig("김밥레코즈", PlaceType.ACTIVITY, ActivityKind.SHOPPING),
+]
+
 _YEONHUI_PLACES: List[CuratedPlaceConfig] = [
     # 레스토랑
     CuratedPlaceConfig("홍대 삭 연희", PlaceType.RESTAURANT, latitude=37.566350, longitude=126.930219),
@@ -519,23 +531,380 @@ _MANGWON_PLACES: List[CuratedPlaceConfig] = [
     CuratedPlaceConfig("홍대널판 망원", PlaceType.ACTIVITY, ActivityKind.SHOPPING),
 ]
 
+_SEONGSAN_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("온랭", PlaceType.RESTAURANT, latitude=37.558986, longitude=126.911936),
+    CuratedPlaceConfig("우리바다수산", PlaceType.RESTAURANT, latitude=37.557722, longitude=126.908947),
+    # 카페
+    CuratedPlaceConfig("이해", PlaceType.CAFE, latitude=37.559912, longitude=126.915398),
+    CuratedPlaceConfig("으믐", PlaceType.CAFE, latitude=37.558799, longitude=126.911313),
+    CuratedPlaceConfig("푸리", PlaceType.CAFE, latitude=37.564646, longitude=126.905726),
+]
+
+_HAPJEONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("고미태", PlaceType.RESTAURANT, latitude=37.553003, longitude=126.911882),
+    CuratedPlaceConfig("이리에라멘", PlaceType.RESTAURANT, latitude=37.548072, longitude=126.914381),
+    # 카페
+    CuratedPlaceConfig("빈브라더스 합정", PlaceType.CAFE, latitude=37.545694, longitude=126.914984),
+    CuratedPlaceConfig("그로니", PlaceType.CAFE, latitude=37.547130, longitude=126.919258),
+    CuratedPlaceConfig("앤트러사이트 합정점", PlaceType.CAFE, latitude=37.545814, longitude=126.918435),
+    # Activity - 일본식주점 (BAR)
+    CuratedPlaceConfig("카에루", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.550136, longitude=126.910269),
+    # Activity - 쇼핑 (SHOPPING) - 의류
+    CuratedPlaceConfig("테켓", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.547972, longitude=126.915660),
+]
+
+_SANGSU_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("마포라스토랑", PlaceType.RESTAURANT, latitude=37.548746, longitude=126.921419),
+    # 카페
+    CuratedPlaceConfig("도덕과 규범", PlaceType.CAFE, latitude=37.548944, longitude=126.924450),
+    CuratedPlaceConfig("푸글렌 서울", PlaceType.CAFE, latitude=37.548394, longitude=126.922812),
+    # Activity - 쇼핑 (SHOPPING) - 음반/레코드샵
+    CuratedPlaceConfig("모자이크 웨스트", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.545145, longitude=126.923566),
+    # Activity - 요리주점 (BAR)
+    CuratedPlaceConfig("상수소굴", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.547380, longitude=126.922195),
+]
+
+_SEOGYO_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("리퍼", PlaceType.RESTAURANT, latitude=37.555903, longitude=126.915572),
+    CuratedPlaceConfig("멘야준", PlaceType.RESTAURANT, latitude=37.554894, longitude=126.916388),
+    CuratedPlaceConfig("멘도무카우", PlaceType.RESTAURANT, latitude=37.553628, longitude=126.918107),
+    CuratedPlaceConfig("담택 본점", PlaceType.RESTAURANT, latitude=37.554452, longitude=126.915165),
+    CuratedPlaceConfig("일만보쌈", PlaceType.RESTAURANT, latitude=37.554422, longitude=126.913579),
+    CuratedPlaceConfig("세상끝의라멘", PlaceType.RESTAURANT, latitude=37.551656, longitude=126.915226),
+    CuratedPlaceConfig("이화누룽지삼계탕", PlaceType.RESTAURANT, latitude=37.553855, longitude=126.928608),
+    CuratedPlaceConfig("재지패티", PlaceType.RESTAURANT, latitude=37.554956, longitude=126.931077),
+    CuratedPlaceConfig("이츠야", PlaceType.RESTAURANT, latitude=37.548759, longitude=126.919935),
+    CuratedPlaceConfig("넨네", PlaceType.RESTAURANT, latitude=37.550423, longitude=126.919842),
+    # 카페
+    CuratedPlaceConfig("퀜치커피", PlaceType.CAFE, latitude=37.554009, longitude=126.912847),
+    CuratedPlaceConfig("앤트러사이트 서교점", PlaceType.CAFE, latitude=37.555522, longitude=126.911679),
+    # Activity - 체험 (WORKSHOP) - 포토스튜디오
+    CuratedPlaceConfig("글리치", PlaceType.ACTIVITY, ActivityKind.WORKSHOP, latitude=37.555546, longitude=126.925017),
+    # Activity - 일본식주점 (BAR)
+    CuratedPlaceConfig("토메루", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.556127, longitude=126.927193),
+    CuratedPlaceConfig("성립", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.556575, longitude=126.910597),
+    # Activity - 쇼핑 (SHOPPING)
+    CuratedPlaceConfig("웍스아웃 홍대라이즈점", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.554429, longitude=126.921244),
+    CuratedPlaceConfig("맨하탄레코즈 서울", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.551842, longitude=126.919931),
+    CuratedPlaceConfig("스컬프스토어 서교점", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.549618, longitude=126.915630),
+    CuratedPlaceConfig("에버닌스테어스", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.550103, longitude=126.919121),
+    CuratedPlaceConfig("하이츠스토어", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.551555, longitude=126.918338),
+]
+
+_HANGANGNO_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("마토미", PlaceType.RESTAURANT, latitude=37.537482, longitude=126.974355),
+    CuratedPlaceConfig("중화식", PlaceType.RESTAURANT, latitude=37.534485, longitude=126.974231),
+    CuratedPlaceConfig("타파코파", PlaceType.RESTAURANT, latitude=37.532552, longitude=126.973214),
+    CuratedPlaceConfig("선채 용산", PlaceType.RESTAURANT, latitude=37.531610, longitude=126.973105),
+    # Activity - 쇼핑 (SHOPPING) - 인테리어/생활용품
+    CuratedPlaceConfig("패스비 엑시트6 제너럴스토어", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.534901, longitude=126.972846),
+    CuratedPlaceConfig("트렁크셀렉션 트렁크스테이션", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.534233, longitude=126.973191),
+    # Activity - 와인바 (BAR)
+    CuratedPlaceConfig("TAA", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.532768, longitude=126.973802),
+]
+
+_HANGANGNO3_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("고로고로 용산", PlaceType.RESTAURANT, latitude=37.525500, longitude=126.962193),
+    # 카페
+    CuratedPlaceConfig("올딧세", PlaceType.CAFE, latitude=37.526981, longitude=126.963039),
+    CuratedPlaceConfig("해이커피앤바", PlaceType.CAFE, latitude=37.526629, longitude=126.962729),
+    CuratedPlaceConfig("르프레임", PlaceType.CAFE, latitude=37.525800, longitude=126.961636),
+    CuratedPlaceConfig("받터", PlaceType.CAFE, latitude=37.525868, longitude=126.962156),
+    CuratedPlaceConfig("머큐리에스프레소바", PlaceType.CAFE, latitude=37.525688, longitude=126.962247),
+    # Activity - 요리주점 (BAR)
+    CuratedPlaceConfig("용산오뎅", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.526407, longitude=126.963127),
+]
+
+_HUAM_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("인손 서울점", PlaceType.RESTAURANT, latitude=37.549864, longitude=126.977806),
+    CuratedPlaceConfig("야스노야 본점", PlaceType.RESTAURANT, latitude=37.546727, longitude=126.978409),
+    # 카페
+    CuratedPlaceConfig("니트커피 아뜰리에", PlaceType.CAFE, latitude=37.552844, longitude=126.976806),
+    CuratedPlaceConfig("패스로스터스", PlaceType.CAFE, latitude=37.553273, longitude=126.976713),
+    CuratedPlaceConfig("자키러브", PlaceType.CAFE, latitude=37.551849, longitude=126.977197),
+    CuratedPlaceConfig("오르소 에스프레소바", PlaceType.CAFE, latitude=37.548865, longitude=126.975955),
+    CuratedPlaceConfig("우녹", PlaceType.CAFE, latitude=37.548403, longitude=126.976117),
+    CuratedPlaceConfig("콤포타블 남산", PlaceType.CAFE, latitude=37.549006, longitude=126.983651),
+    CuratedPlaceConfig("카페무니", PlaceType.CAFE, latitude=37.547192, longitude=126.983931),
+    # Activity - 쇼핑 (SHOPPING) - 주방용품/생활소품
+    CuratedPlaceConfig("시논샵 남산", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.548661, longitude=126.983544),
+]
+
+_SINDANG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("처가집", PlaceType.RESTAURANT, latitude=37.553043, longitude=127.008205),
+    CuratedPlaceConfig("도우소사이어티 약수점", PlaceType.RESTAURANT, latitude=37.555149, longitude=127.009971),
+    CuratedPlaceConfig("만포막국수", PlaceType.RESTAURANT, latitude=37.555830, longitude=127.010319),
+    CuratedPlaceConfig("신당주식", PlaceType.RESTAURANT, latitude=37.556770, longitude=127.011046),
+    CuratedPlaceConfig("쿠부타야", PlaceType.RESTAURANT, latitude=37.556770, longitude=127.013191),
+    CuratedPlaceConfig("라익스", PlaceType.RESTAURANT, latitude=37.557773, longitude=127.013771),
+    CuratedPlaceConfig("파티파티", PlaceType.RESTAURANT, latitude=37.560760, longitude=127.012801),
+    CuratedPlaceConfig("미국식 신당점", PlaceType.RESTAURANT, latitude=37.564451, longitude=127.013813),
+    CuratedPlaceConfig("다케슬라이스", PlaceType.RESTAURANT, latitude=37.564158, longitude=127.010353),
+    # 카페
+    CuratedPlaceConfig("스티키플로어", PlaceType.CAFE, latitude=37.549818, longitude=127.007767),
+    CuratedPlaceConfig("케고", PlaceType.CAFE, latitude=37.551572, longitude=127.007582),
+    CuratedPlaceConfig("약수터", PlaceType.CAFE, latitude=37.552969, longitude=127.010231),
+    CuratedPlaceConfig("리사르커피 약수점", PlaceType.CAFE, latitude=37.552475, longitude=127.010430),
+    CuratedPlaceConfig("사이키델릭커피", PlaceType.CAFE, latitude=37.554035, longitude=127.008797),
+    CuratedPlaceConfig("파오리", PlaceType.CAFE, latitude=37.552554, longitude=127.012007),
+    CuratedPlaceConfig("카페와일드덕", PlaceType.CAFE, latitude=37.554913, longitude=127.008697),
+    CuratedPlaceConfig("보헤이커피", PlaceType.CAFE, latitude=37.555446, longitude=127.007922),
+    CuratedPlaceConfig("카페라츠오브", PlaceType.CAFE, latitude=37.557499, longitude=127.009103),
+    CuratedPlaceConfig("코시아커피 약수점", PlaceType.CAFE, latitude=37.555973, longitude=127.013722),
+    CuratedPlaceConfig("펄시커피", PlaceType.CAFE, latitude=37.559331, longitude=127.009643),
+    # Activity - 칵테일바/와인바 (BAR)
+    CuratedPlaceConfig("춘풍양조장", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.553306, longitude=127.009232),
+    CuratedPlaceConfig("칠", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.556408, longitude=127.009031),
+    # Activity - 쇼핑 (SHOPPING) - 음반/레코드샵
+    CuratedPlaceConfig("모자이크", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.563449, longitude=127.011363),
+]
+
+_JANGCHUNG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("콘드에뻬뻬", PlaceType.RESTAURANT, latitude=37.562209, longitude=127.007546),
+    CuratedPlaceConfig("니키", PlaceType.RESTAURANT, latitude=37.560448, longitude=127.004835),
+    # 카페
+    CuratedPlaceConfig("홀베그", PlaceType.CAFE, latitude=37.561302, longitude=127.005343),
+    CuratedPlaceConfig("타운폰드", PlaceType.CAFE, latitude=37.562563, longitude=127.004364),
+]
+
+_PILDONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("필동면옥", PlaceType.RESTAURANT, latitude=37.560398, longitude=126.996940),
+    CuratedPlaceConfig("도우큐먼트", PlaceType.RESTAURANT, latitude=37.561992, longitude=126.991718),
+    # 카페
+    CuratedPlaceConfig("헤베커피", PlaceType.CAFE, latitude=37.558784, longitude=126.996012),
+    CuratedPlaceConfig("빠마", PlaceType.CAFE, latitude=37.556410, longitude=126.995315),
+    CuratedPlaceConfig("섹터커피 충무로점", PlaceType.CAFE, latitude=37.560942, longitude=126.993915),
+    # Activity - 칵테일바 (BAR)
+    CuratedPlaceConfig("디올드", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.561337, longitude=126.991681),
+]
+
+_CHUNGMURO_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("진심", PlaceType.RESTAURANT, latitude=37.562609, longitude=126.994069),
+    CuratedPlaceConfig("카르보파스타바", PlaceType.RESTAURANT, latitude=37.562943, longitude=126.991398),
+    CuratedPlaceConfig("사랑방칼국수", PlaceType.RESTAURANT, latitude=37.563267, longitude=126.991330),
+    CuratedPlaceConfig("란주칼면", PlaceType.RESTAURANT, latitude=37.560977, longitude=126.982149),
+    # 카페
+    CuratedPlaceConfig("섬광", PlaceType.CAFE, latitude=37.562521, longitude=126.996328),
+    CuratedPlaceConfig("네츠커피하우스", PlaceType.CAFE, latitude=37.562763, longitude=126.996217),
+    CuratedPlaceConfig("캐시미어커피", PlaceType.CAFE, latitude=37.562878, longitude=126.992329),
+    # Activity - 호프/요리주점 (BAR)
+    CuratedPlaceConfig("소", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.562490, longitude=126.995125),
+    CuratedPlaceConfig("중", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.562548, longitude=126.994934),
+]
+
+_CHODONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("떼르세로 코스테스", PlaceType.RESTAURANT, latitude=37.563319, longitude=126.991503),
+    CuratedPlaceConfig("비카인드 반미", PlaceType.RESTAURANT, latitude=37.563788, longitude=126.992295),
+    CuratedPlaceConfig("우메돈", PlaceType.RESTAURANT, latitude=37.564027, longitude=126.992712),
+    CuratedPlaceConfig("올디스타코", PlaceType.RESTAURANT, latitude=37.565064, longitude=126.992935),
+    # 카페
+    CuratedPlaceConfig("섹터커피 을지로점", PlaceType.CAFE, latitude=37.564589, longitude=126.992642),
+    # Activity - 일본식주점 (BAR)
+    CuratedPlaceConfig("간빠진새 을지로점", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.565018, longitude=126.992205),
+]
+
+_EULJIRO_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("안동장", PlaceType.RESTAURANT, latitude=37.566085, longitude=126.991579),
+    CuratedPlaceConfig("을지하옥", PlaceType.RESTAURANT, latitude=37.565414, longitude=126.991311),
+    CuratedPlaceConfig("타마고", PlaceType.RESTAURANT, latitude=37.566105, longitude=126.986225),
+    # 카페
+    CuratedPlaceConfig("아사시", PlaceType.CAFE, latitude=37.566184, longitude=126.992360),
+    CuratedPlaceConfig("로우커피스탠드 을지로점", PlaceType.CAFE, latitude=37.566374, longitude=126.988844),
+    CuratedPlaceConfig("피그먼츠 을지로입구점", PlaceType.CAFE, latitude=37.566493, longitude=126.983681),
+    # Activity - 이자카야 (BAR)
+    CuratedPlaceConfig("토리카미", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.565328, longitude=126.991485),
+]
+
+_JEODONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("실비바 파도", PlaceType.RESTAURANT, latitude=37.565087, longitude=126.990334),
+    CuratedPlaceConfig("지유켄", PlaceType.RESTAURANT, latitude=37.565281, longitude=126.990217),
+    # 카페
+    CuratedPlaceConfig("젤라또먼트 을지로", PlaceType.CAFE, latitude=37.565199, longitude=126.990060),
+    CuratedPlaceConfig("콘웨이커피 을지로", PlaceType.CAFE, latitude=37.564506, longitude=126.988800),
+    # Activity - 호프/요리주점 (BAR)
+    CuratedPlaceConfig("네평반", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.564431, longitude=126.989899),
+]
+
+_GWANCHEOL_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("진중 우육면관 본점", PlaceType.RESTAURANT, latitude=37.568555, longitude=126.986111),
+    CuratedPlaceConfig("아리계곡 종각점", PlaceType.RESTAURANT, latitude=37.569632, longitude=126.985398),
+    CuratedPlaceConfig("손정보쌈 종로점", PlaceType.RESTAURANT, latitude=37.568929, longitude=126.986179),
+    CuratedPlaceConfig("파작", PlaceType.RESTAURANT, latitude=37.568924, longitude=126.984057),
+    # 카페
+    CuratedPlaceConfig("노우즈 종로점 에스프레소바", PlaceType.CAFE, latitude=37.569753, longitude=126.984040),
+    CuratedPlaceConfig("아마츄어작업실 청계점", PlaceType.CAFE, latitude=37.568639, longitude=126.988358),
+    # Activity - 해물 술집 (BAR)
+    CuratedPlaceConfig("해물점 종각직영점", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.568816, longitude=126.984660),
+]
+
+_CHEONGJIN_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("쌤쌤쌤 광화문점", PlaceType.RESTAURANT, latitude=37.570832, longitude=126.978915),
+    CuratedPlaceConfig("폴리스 광화문D타워점", PlaceType.RESTAURANT, latitude=37.571068, longitude=126.978927),
+    # 카페
+    CuratedPlaceConfig("리사르커피 종로점", PlaceType.CAFE, latitude=37.570445, longitude=126.980366),
+    CuratedPlaceConfig("조앤도슨 광화문점", PlaceType.CAFE, latitude=37.571104, longitude=126.981390),
+    CuratedPlaceConfig("콤포타블 광화문", PlaceType.CAFE, latitude=37.572257, longitude=126.980344),
+    # Activity - 일식 술집 (BAR)
+    CuratedPlaceConfig("카린지린가네스낵바 광화문점", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.571860, longitude=126.980740),
+]
+
+_GONGPYEONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("백부장집닭한마리 본관", PlaceType.RESTAURANT, latitude=37.571797, longitude=126.982690),
+    CuratedPlaceConfig("공평동꼼장어 본점", PlaceType.RESTAURANT, latitude=37.571811, longitude=126.982807),
+    # 카페
+    CuratedPlaceConfig("히트커피로스터스 센트로폴리스점", PlaceType.CAFE, latitude=37.571681, longitude=126.983530),
+]
+
+_GWONNONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("이다", PlaceType.RESTAURANT, latitude=37.577016, longitude=126.991713),
+    CuratedPlaceConfig("도시바 서순라길점", PlaceType.RESTAURANT, latitude=37.576322, longitude=126.991447),
+    # Activity - 펍/요리주점 (BAR)
+    CuratedPlaceConfig("퀸즈가드", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.575403, longitude=126.991442),
+    CuratedPlaceConfig("서울집시 서순라길점", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.575025, longitude=126.991555),
+]
+
+_UNNI_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("포카 안국", PlaceType.RESTAURANT, latitude=37.576186, longitude=126.989403),
+    CuratedPlaceConfig("소마", PlaceType.RESTAURANT, latitude=37.575640, longitude=126.989727),
+    CuratedPlaceConfig("루시드", PlaceType.RESTAURANT, latitude=37.575619, longitude=126.989512),
+    # 카페
+    CuratedPlaceConfig("텅", PlaceType.CAFE, latitude=37.577189, longitude=126.988161),
+    # Activity - 쇼핑 (SHOPPING)
+    CuratedPlaceConfig("레몬서울", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.577088, longitude=126.988453),
+    # Activity - 칵테일바 (BAR)
+    CuratedPlaceConfig("인공위성", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.576084, longitude=126.989464),
+]
+
+_GYEDONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("쿄와우동", PlaceType.RESTAURANT, latitude=37.578102, longitude=126.986591),
+    # 카페
+    CuratedPlaceConfig("어니언컴퍼니 안국점", PlaceType.CAFE, latitude=37.577632, longitude=126.986574),
+    CuratedPlaceConfig("런던베이글뮤지엄 안국점", PlaceType.CAFE, latitude=37.579178, longitude=126.986200),
+    CuratedPlaceConfig("카페 델 꼬또네 북촌계동점", PlaceType.CAFE, latitude=37.579412, longitude=126.987462),
+    CuratedPlaceConfig("무에", PlaceType.CAFE, latitude=37.580854, longitude=126.986641),
+    CuratedPlaceConfig("마녹", PlaceType.CAFE, latitude=37.581142, longitude=126.986867),
+]
+
+_JAEDONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("호이식", PlaceType.RESTAURANT, latitude=37.577847, longitude=126.986291),
+    CuratedPlaceConfig("북촌김치재", PlaceType.RESTAURANT, latitude=37.577826, longitude=126.986211),
+    CuratedPlaceConfig("신라제면 안국점", PlaceType.RESTAURANT, latitude=37.578231, longitude=126.986227),
+    CuratedPlaceConfig("깡통만두", PlaceType.RESTAURANT, latitude=37.578165, longitude=126.986085),
+    CuratedPlaceConfig("로우파이브 안국", PlaceType.RESTAURANT, latitude=37.578639, longitude=126.985578),
+    # Activity - 일본식주점 (BAR)
+    CuratedPlaceConfig("프루", PlaceType.ACTIVITY, ActivityKind.BAR, latitude=37.579421, longitude=126.984377),
+    # Activity - 쇼핑 (SHOPPING) - 상품전시매장
+    CuratedPlaceConfig("오늘의집 북촌", PlaceType.ACTIVITY, ActivityKind.SHOPPING, latitude=37.579250, longitude=126.984266),
+]
+
+_ANGUKDONG_PLACES: List[CuratedPlaceConfig] = [
+    # 레스토랑
+    CuratedPlaceConfig("동백식당", PlaceType.RESTAURANT, latitude=37.576538, longitude=126.984262),
+    CuratedPlaceConfig("오레노라멘 인사점", PlaceType.RESTAURANT, latitude=37.576457, longitude=126.984559),
+    # 카페
+    CuratedPlaceConfig("공공재커피클럽", PlaceType.CAFE, latitude=37.577552, longitude=126.983672),
+    CuratedPlaceConfig("도트블랭킷", PlaceType.CAFE, latitude=37.577026, longitude=126.984097),
+    CuratedPlaceConfig("콤포타블 안국", PlaceType.CAFE, latitude=37.576838, longitude=126.984206),
+    CuratedPlaceConfig("리와인드 서울", PlaceType.CAFE, latitude=37.575906, longitude=126.983446),
+]
+
+_PILDONG_WITH_CHUNGMURO: List[CuratedPlaceConfig] = _PILDONG_PLACES + _CHUNGMURO_PLACES
+_ANGUK_COMBINED: List[CuratedPlaceConfig] = (
+    _UNNI_PLACES + _GYEDONG_PLACES + _JAEDONG_PLACES + _ANGUKDONG_PLACES
+)
+_EULJIRO_COMBINED: List[CuratedPlaceConfig] = (
+    _CHODONG_PLACES
+    + _EULJIRO_PLACES
+    + _JEODONG_PLACES
+    + _GWANCHEOL_PLACES
+    + _CHEONGJIN_PLACES
+    + _GONGPYEONG_PLACES
+    + _GWONNONG_PLACES
+    + _UNNI_PLACES
+    + _GYEDONG_PLACES
+    + _JAEDONG_PLACES
+    + _ANGUKDONG_PLACES
+)
+_SINDANG_WITH_JANGCHUNG: List[CuratedPlaceConfig] = (
+    _SINDANG_PLACES
+    + _JANGCHUNG_PLACES
+    + _PILDONG_PLACES
+    + _CHUNGMURO_PLACES
+    + _CHODONG_PLACES
+    + _EULJIRO_PLACES
+    + _JEODONG_PLACES
+    + _GWANCHEOL_PLACES
+    + _CHEONGJIN_PLACES
+    + _GONGPYEONG_PLACES
+    + _GWONNONG_PLACES
+    + _UNNI_PLACES
+    + _GYEDONG_PLACES
+    + _JAEDONG_PLACES
+    + _ANGUKDONG_PLACES
+)
+
+_YEONNAM_WITH_DONGGYO: List[CuratedPlaceConfig] = _YEONNAM_PLACES + _DONGGYO_PLACES
+_MANGWON_COMBINED: List[CuratedPlaceConfig] = (
+    _MANGWON_PLACES + _SEONGSAN_PLACES + _HAPJEONG_PLACES + _SANGSU_PLACES + _SEOGYO_PLACES
+)
+_HAPJEONG_WITH_SANGSU: List[CuratedPlaceConfig] = (
+    _HAPJEONG_PLACES + _SANGSU_PLACES + _SEOGYO_PLACES
+)
+_HANGANGNO_COMBINED: List[CuratedPlaceConfig] = _HANGANGNO_PLACES + _HANGANGNO3_PLACES
+_HAEBANGCHON_WITH_HUAM: List[CuratedPlaceConfig] = _YONGSAN_PLACES + _HUAM_PLACES
+_YONGSAN_COMBINED: List[CuratedPlaceConfig] = (
+    _YONGSAN_PLACES + _HUAM_PLACES + _HANGANGNO_PLACES + _HANGANGNO3_PLACES
+)
+
 _CURATED_BY_AREA: Dict[str, List[CuratedPlaceConfig]] = {
     "성수": _SEONGSU_PLACES,
     "성수동": _SEONGSU_PLACES,
     "성수역": _SEONGSU_PLACES,
     "한남": _HANNAM_PLACES,
     "한남동": _HANNAM_PLACES,
-    "연남": _YEONNAM_PLACES,
-    "연남동": _YEONNAM_PLACES,
-    "연남역": _YEONNAM_PLACES,
+    "연남": _YEONNAM_WITH_DONGGYO,
+    "연남동": _YEONNAM_WITH_DONGGYO,
+    "연남역": _YEONNAM_WITH_DONGGYO,
+    "동교": _DONGGYO_PLACES,
+    "동교동": _DONGGYO_PLACES,
     "연희": _YEONHUI_PLACES,
     "연희동": _YEONHUI_PLACES,
     "이태원": _ITAEWON_PLACES,
     "이태원동": _ITAEWON_PLACES,
     "이태원역": _ITAEWON_PLACES,
-    "용산": _YONGSAN_PLACES,
-    "용산동": _YONGSAN_PLACES,
-    "해방촌": _YONGSAN_PLACES,
+    "용산": _YONGSAN_COMBINED,
+    "용산동": _YONGSAN_COMBINED,
+    "해방촌": _HAEBANGCHON_WITH_HUAM,
+    "후암": _HUAM_PLACES,
+    "후암동": _HUAM_PLACES,
+    "남산": _HUAM_PLACES,
+    "한강로": _HANGANGNO_COMBINED,
+    "한강로1가": _HANGANGNO_PLACES,
+    "한강로3가": _HANGANGNO3_PLACES,
+    "신용산": _HANGANGNO_PLACES,
+    "신용산역": _HANGANGNO_PLACES,
+    "용산역": _HANGANGNO3_PLACES,
     "논현": _NONHYEON_PLACES,
     "논현동": _NONHYEON_PLACES,
     "논현역": _NONHYEON_PLACES,
@@ -551,9 +920,71 @@ _CURATED_BY_AREA: Dict[str, List[CuratedPlaceConfig]] = {
     "잠실": _JAMSIL_PLACES,
     "잠실동": _JAMSIL_PLACES,
     "잠실역": _JAMSIL_PLACES,
-    "망원": _MANGWON_PLACES,
-    "망원동": _MANGWON_PLACES,
-    "망원역": _MANGWON_PLACES,
+    "망원": _MANGWON_COMBINED,
+    "망원동": _MANGWON_COMBINED,
+    "망원역": _MANGWON_COMBINED,
+    "성산": _SEONGSAN_PLACES,
+    "성산동": _SEONGSAN_PLACES,
+    "합정": _HAPJEONG_WITH_SANGSU,
+    "합정동": _HAPJEONG_WITH_SANGSU,
+    "합정역": _HAPJEONG_WITH_SANGSU,
+    "상수": _SANGSU_PLACES,
+    "상수동": _SANGSU_PLACES,
+    "상수역": _SANGSU_PLACES,
+    "서교": _SEOGYO_PLACES,
+    "서교동": _SEOGYO_PLACES,
+    "홍대": _SEOGYO_PLACES,
+    "홍대입구": _SEOGYO_PLACES,
+    "홍대입구역": _SEOGYO_PLACES,
+    "신당": _SINDANG_WITH_JANGCHUNG,
+    "신당동": _SINDANG_WITH_JANGCHUNG,
+    "신당역": _SINDANG_WITH_JANGCHUNG,
+    "약수": _SINDANG_WITH_JANGCHUNG,
+    "약수역": _SINDANG_WITH_JANGCHUNG,
+    "장충": _JANGCHUNG_PLACES,
+    "장충동": _JANGCHUNG_PLACES,
+    "동대입구": _JANGCHUNG_PLACES,
+    "동대입구역": _JANGCHUNG_PLACES,
+    "필동": _PILDONG_WITH_CHUNGMURO,
+    "충무로": _CHUNGMURO_PLACES,
+    "충무로역": _CHUNGMURO_PLACES,
+    "초동": _CHODONG_PLACES,
+    "을지로": _EULJIRO_COMBINED,
+    "을지로4가": _CHODONG_PLACES,
+    "을지로4가역": _CHODONG_PLACES,
+    "을지로2가": _EULJIRO_PLACES,
+    "을지로3가": _EULJIRO_PLACES,
+    "을지로3가역": _EULJIRO_PLACES,
+    "을지로입구": _EULJIRO_PLACES,
+    "을지로입구역": _EULJIRO_PLACES,
+    "저동": _JEODONG_PLACES,
+    "저동2가": _JEODONG_PLACES,
+    "관철": _GWANCHEOL_PLACES,
+    "관철동": _GWANCHEOL_PLACES,
+    "종각": _GWANCHEOL_PLACES,
+    "종각역": _GWANCHEOL_PLACES,
+    "청진": _CHEONGJIN_PLACES,
+    "청진동": _CHEONGJIN_PLACES,
+    "광화문": _CHEONGJIN_PLACES,
+    "광화문역": _CHEONGJIN_PLACES,
+    "공평": _GONGPYEONG_PLACES,
+    "공평동": _GONGPYEONG_PLACES,
+    "권농": _GWONNONG_PLACES,
+    "권농동": _GWONNONG_PLACES,
+    "서순라길": _GWONNONG_PLACES,
+    "종로3가": _GWONNONG_PLACES,
+    "종로3가역": _GWONNONG_PLACES,
+    "익선동": _GWONNONG_PLACES,
+    "운니": _UNNI_PLACES,
+    "운니동": _UNNI_PLACES,
+    "안국": _ANGUK_COMBINED,
+    "안국역": _ANGUK_COMBINED,
+    "계": _GYEDONG_PLACES,
+    "계동": _GYEDONG_PLACES,
+    "북촌": _GYEDONG_PLACES,
+    "재": _JAEDONG_PLACES,
+    "재동": _JAEDONG_PLACES,
+    "안국동": _ANGUKDONG_PLACES,
 }
 
 
